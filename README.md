@@ -6,6 +6,8 @@
 - **Backend:** Python, FastAPI, automata-lib
 - **Yapay Zeka:** Google Gemini API (`gemini-2.5-flash`)
 
+Geliştirme durumu ve kalan işler: [docs/YAPILACAKLAR.md](docs/YAPILACAKLAR.md)
+
 ## Kurulum
 
 ### Backend
