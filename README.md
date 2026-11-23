@@ -32,7 +32,13 @@ cd frontend
 npm install
 npm run dev
 ```
-Uygulama: http://localhost:5173
+Uygulama: http://localhost:5173 (geliştirme sunucusu `/api` isteklerini otomatik olarak `localhost:8000`'e yönlendirir; backend'in açık olması gerekir).
+
+## Kullanım (Faz 2)
+- **Sonlu Otomat sekmesi:** araç çubuğundan *Durum ekle* modunu seçip tuvale tıklayın, *Geçiş ekle* modunda kaynak ve hedef duruma tıklayıp sembolleri girin (`0,1`; ε-NFA'da `ε` veya `eps`). Bir durumu seçerek başlangıç/kabul durumu yapabilir, yeniden adlandırabilirsiniz.
+- **Test:** girdi dizesini yazıp *Test et*'e basın; oynat/ileri/geri ile aktif durum ve kullanılan geçişler adım adım vurgulanır.
+- **Dönüşümler sekmesi:** NFA → DFA, minimizasyon ve düzenli ifade; sonucu tek tıkla tuvale aktarabilirsiniz.
+- **Kaydetme:** çalışma alanı tarayıcıya otomatik taslak olarak kaydedilir. Ayrıca adlandırılmış kayıt, JSON indirme ve yükleme vardır. Tüm kayıt işlemleri `frontend/src/services/storageService.js` üzerinden yapılır; ileride Supabase vb. için yalnızca `setStorageAdapter` ile yeni bir adaptör vermek yeterlidir.
 
 ## Testler
 ```bash
