@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowRight, BookOpenText, Check, Copy, KeyRound, Lightbulb, RefreshCw, ShieldAlert, Sparkles, Wand2 } from 'lucide-react'
-import Markdown from '../components/Markdown'
+import { ArrowRight, BookOpenText, KeyRound, Lightbulb, RefreshCw, Sparkles, Wand2 } from 'lucide-react'
+import Explanation from '../components/Explanation'
+import ImageAnalysis from '../components/ImageAnalysis'
 import MiniCanvas from '../components/MiniCanvas'
 import TransitionTable from '../components/TransitionTable'
 import { Alert, Badge, Button, Panel, inputClass } from '../components/ui'
@@ -50,43 +51,7 @@ function KeyCard({ onRetry, checking }) {
   )
 }
 
-function Explanation({ result }) {
-  const [copied, setCopied] = useState(false)
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(result.regex)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    } catch {
-      setCopied(false)
-    }
-  }
-  return (
-    <div className="space-y-4">
-      <div>
-        <p className="mb-1 text-xs font-medium text-slate-500">Kesin düzenli ifade (sunucuda matematiksel olarak türetildi)</p>
-        <div className="flex items-start gap-2 rounded-lg bg-indigo-50 px-3 py-2 ring-1 ring-indigo-100">
-          <code className="flex-1 break-all font-mono text-sm text-indigo-900">{result.regex}</code>
-          <button type="button" onClick={copy} className="text-indigo-500 hover:text-indigo-700" title="Kopyala" aria-label="Düzenli ifadeyi kopyala">
-            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-          </button>
-        </div>
-      </div>
-      <div>
-        <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-slate-500">
-          <Sparkles className="h-3.5 w-3.5 text-indigo-400" /> Gemini'nin açıklaması
-        </p>
-        <Markdown source={result.explanation} />
-      </div>
-      <p className="flex items-start gap-1.5 text-xs text-slate-400">
-        <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-        Düzenli ifade kesindir; sözel açıklama yapay zeka tarafından yazıldığı için hata içerebilir.
-      </p>
-    </div>
-  )
-}
-
-export default function AIPage({ state, setState, faDoc, onImport, autoExplain, onAutoExplainDone }) {
+export default function AIPage({ state, setState, imageState, setImageState, faDoc, onImport, onOpenGrammar, autoExplain, onAutoExplainDone }) {
   const { prompt, generated, explanation, explainSource } = state
   const set = (patch) => setState((s) => ({ ...s, ...patch }))
   const [status, setStatus] = useState(null)
@@ -157,7 +122,7 @@ export default function AIPage({ state, setState, faDoc, onImport, autoExplain, 
           <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
             <Sparkles className="h-5 w-5 text-indigo-500" /> Yapay Zeka Asistanı
           </h2>
-          <p className="text-sm text-slate-500">Doğal dilden otomat çizdirin ya da bir otomatın tanıdığı dili Türkçe açıklatın.</p>
+          <p className="text-sm text-slate-500">Doğal dilden otomat çizdirin, bir otomatın dilini açıklatın ya da fotoğraftaki gramer, diyagram veya soruyu analiz ettirin.</p>
         </div>
         {status?.configured && <Badge tone="green">Gemini bağlı · {status.model}</Badge>}
       </div>
@@ -258,6 +223,15 @@ export default function AIPage({ state, setState, faDoc, onImport, autoExplain, 
           </div>
         </Panel>
       </div>
+
+      <ImageAnalysis
+        state={imageState}
+        setState={setImageState}
+        keyMissing={keyMissing}
+        onError={handleError}
+        onImport={onImport}
+        onOpenGrammar={onOpenGrammar}
+      />
     </div>
   )
 }

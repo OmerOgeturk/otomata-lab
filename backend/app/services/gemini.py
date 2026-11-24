@@ -1,3 +1,5 @@
+import base64
+import binascii
 import json
 import os
 import time
@@ -6,13 +8,14 @@ from pathlib import Path
 from dotenv import load_dotenv
 from pydantic import ValidationError
 
+from app.core import cfg as cfg_core
 from app.core import fa as fa_core
-from app.core.common import AutomatonError
+from app.core.common import AutomatonError, require
 from app.schemas import FiniteAutomaton
 
 ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
 DEFAULT_MODEL = "gemini-3.8-flash"
-DEFAULT_FALLBACKS = "gemini-3.7-flash,gemini-3.1-flash-lite"
+DEFAULT_FALLBACKS = "gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite"
 REQUEST_TIMEOUT_MS = 30_000
 TRANSIENT_CODES = {429, 500, 503, 504}
 PASSES = 2
@@ -114,7 +117,19 @@ def _friendly(exc: Exception | None) -> str:
     return f"Gemini API isteği başarısız oldu: {exc}"
 
 
-def _generate(contents: str, instruction: str, schema: dict | None = None) -> str:
+def _quota_message(exhausted: int, total: int) -> str:
+    if exhausted >= total:
+        return (
+            "Ücretsiz Gemini kotası tüm modellerde doldu (model başına günde yaklaşık 20 istek). "
+            "Kota her gün sıfırlanır; yarın tekrar deneyin ya da Google AI Studio'da faturalandırmayı açın."
+        )
+    return (
+        "Bazı Gemini modellerinin günlük ücretsiz kotası doldu, kalan yedek modeller de şu anda çok yoğun. "
+        "Birkaç dakika sonra tekrar deneyin."
+    )
+
+
+def _generate(contents, instruction: str, schema: dict | None = None) -> str:
     from google.genai import errors, types
 
     client, models = _client()
@@ -123,14 +138,19 @@ def _generate(contents: str, instruction: str, schema: dict | None = None) -> st
         config.response_mime_type = "application/json"
         config.response_schema = schema
     last: Exception | None = None
+    exhausted: set[str] = set()
     for attempt in range(PASSES):
         if attempt:
             time.sleep(2)
         for model in models:
+            if model in exhausted:
+                continue
             try:
                 response = client.models.generate_content(model=model, contents=contents, config=config)
             except errors.APIError as exc:
                 last = exc
+                if exc.code in (404, 429):
+                    exhausted.add(model)
                 if exc.code in TRANSIENT_CODES or exc.code == 404:
                     continue
                 raise AIError(_friendly(exc)) from exc
@@ -140,6 +160,8 @@ def _generate(contents: str, instruction: str, schema: dict | None = None) -> st
             if response.text:
                 return response.text
             last = AIError("Gemini boş yanıt döndürdü.")
+    if exhausted and getattr(last, "code", None) != 401:
+        raise AIError(_quota_message(len(exhausted), len(models))) from last
     raise AIError(_friendly(last) if not isinstance(last, AIError) else str(last)) from last
 
 
@@ -168,3 +190,92 @@ def explain_language(automaton: FiniteAutomaton, regex: str) -> str:
         f"Kesin düzenli ifade: {regex}"
     )
     return _generate(contents, EXPLAIN_INSTRUCTION)
+
+
+GRAMMAR_SCHEMA = {
+    "type": "OBJECT",
+    "properties": {"grammar": {"type": "STRING"}, "notes": {"type": "STRING"}},
+    "required": ["grammar", "notes"],
+}
+
+IMAGE_FA_SCHEMA = {
+    **FA_RESPONSE_SCHEMA,
+    "properties": {**FA_RESPONSE_SCHEMA["properties"], "notes": {"type": "STRING"}},
+}
+
+IMAGE_GRAMMAR_INSTRUCTION = """Sen bir otomata teorisi uzmanısın. Görseldeki (fotoğraf, ekran görüntüsü ya da el yazısı)
+bağlamdan bağımsız grameri olduğu gibi metne aktar; dönüştürme ya da sadeleştirme YAPMA.
+grammar alanının biçimi:
+- Her değişken için tek satır: S -> aSb | ε
+- Değişkenler büyük harf (alt indisli olanları S_0, A_1 gibi yaz; çok harfli adları <İfade> gibi açılı parantezle yaz).
+- Terminaller küçük harf, rakam ya da tek karakterlik semboller; boş dize için ε yaz (λ veya e ile gösterilmişse de ε yaz).
+- İlk satır başlangıç değişkeninin kuralı olsun.
+notes alanına yalnızca okunması belirsiz kısımları ve yaptığın varsayımları kısaca Türkçe yaz; her şey net okunduysa notes alanını boş bırak, ne yaptığını anlatma.
+Görselde gramer yoksa grammar alanını boş bırak ve notes alanında ne gördüğünü açıkla."""
+
+IMAGE_FA_INSTRUCTION = """Sen bir otomata teorisi uzmanısın. Görseldeki durum diyagramını (DFA, NFA ya da ε-NFA) olduğu gibi
+JSON'a aktar; otomatı değiştirme, tamamlama ya da küçültme.
+Kurallar:
+- Durum adlarını görseldeki gibi yaz (q0, q1, A, B ...); adı yoksa q0, q1 ... ver.
+- Başlangıç durumu: dışarıdan gelen ok ya da "start" etiketiyle gösterilen durum. Kabul durumları: çift halkalı durumlar.
+- "0,1" gibi çok sembollü kenar etiketlerini her sembol için ayrı geçişe böl. ε veya λ etiketleri için symbol "ε".
+- type: ε-geçişi varsa "ENFA"; her durumdan her sembol için tam olarak bir geçiş varsa "DFA"; aksi halde (eksik ya da çoklu geçiş) "NFA".
+- alphabet: kenarlarda geçen tüm tek karakterli semboller (ε hariç).
+notes alanına yalnızca okunması belirsiz kısımları kısaca Türkçe yaz; her şey net okunduysa notes alanını boş bırak, ne yaptığını anlatma."""
+
+IMAGE_QUESTION_INSTRUCTION = """Sen otomata teorisi ve biçimsel diller dersi veren sabırlı bir öğretim görevlisisin.
+Görseldeki soruyu, otomatı, grameri ya da ifadeyi incele ve kullanıcının sorusunu üniversite öğrencisinin anlayacağı sade
+bir Türkçe ile adım adım yanıtla. Matematiksel ifadeler için $...$ biçiminde LaTeX kullanabilirsin. Yanıtı Markdown ver.
+Görsel konuyla ilgisizse bunu nazikçe belirt."""
+
+
+def _image_part(image: str, mime_type: str):
+    from google.genai import types
+
+    data = image.split(",", 1)[1] if image.startswith("data:") else image
+    try:
+        raw = base64.b64decode(data, validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise AutomatonError("Görsel verisi çözülemedi (geçersiz base64).") from exc
+    require(len(raw) <= 10 * 1024 * 1024, "Görsel 10 MB'tan büyük olamaz.")
+    return types.Part.from_bytes(data=raw, mime_type=mime_type)
+
+
+def _read_structured(part, instruction: str, schema: dict, parse, attempts: int = 2):
+    prompt = "Görseldekini kurallara uygun biçimde aktar."
+    last_error = ""
+    for _ in range(attempts):
+        raw = _generate([part, prompt], instruction, schema)
+        try:
+            return parse(json.loads(raw))
+        except (json.JSONDecodeError, ValidationError, AutomatonError) as exc:
+            last_error = str(exc)
+            prompt = f"Önceki yanıtın geçersizdi: {last_error}\nGörseli yeniden incele ve hatayı düzelterek aktar."
+    raise AIError(f"Görsel okunamadı: {last_error}")
+
+
+def _parse_grammar(data: dict) -> dict:
+    grammar = (data.get("grammar") or "").strip()
+    notes = (data.get("notes") or "").strip()
+    if not grammar:
+        raise AIError(notes or "Görselde bir gramer bulunamadı.")
+    return {"grammar": cfg_core.format_grammar(cfg_core.parse(grammar)), "notes": notes}
+
+
+def _parse_automaton(data: dict) -> dict:
+    notes = (data.pop("notes", "") or "").strip()
+    automaton = FiniteAutomaton.model_validate(data)
+    fa_core.validate(automaton)
+    return {"automaton": automaton, "notes": notes}
+
+
+def analyze_image(task: str, image: str, mime_type: str, question: str = "") -> dict:
+    part = _image_part(image, mime_type)
+    if task == "grammar":
+        return _read_structured(part, IMAGE_GRAMMAR_INSTRUCTION, GRAMMAR_SCHEMA, _parse_grammar)
+    if task == "automaton":
+        result = _read_structured(part, IMAGE_FA_INSTRUCTION, IMAGE_FA_SCHEMA, _parse_automaton)
+        result["regex"] = fa_core.to_regex(result["automaton"])
+        return result
+    text = question.strip() or "Bu görselde ne var? Otomata teorisi açısından açıkla ve varsa soruyu çöz."
+    return {"answer": _generate([part, text], IMAGE_QUESTION_INSTRUCTION)}

@@ -47,5 +47,10 @@ export const api = {
     status: () => request('/api/ai/status'),
     generate: (prompt) => request('/api/ai/generate', { prompt }),
     explain: (automaton) => request('/api/ai/explain', automaton),
+    image: (payload) => request('/api/ai/image', payload),
+  },
+  cfg: {
+    cnf: (grammar) => request('/api/cfg/cnf', { grammar }),
+    cyk: (grammar, input) => request('/api/cfg/cyk', { grammar, input }),
   },
 }

@@ -234,3 +234,121 @@ def test_ai_invalid_key_is_not_retried(monkeypatch):
     assert "anahtarı geçersiz" in r.json()["detail"]
     assert fake.calls == ["ana"]
 
+
+
+def cnf(grammar):
+    r = client.post("/api/cfg/cnf", json={"grammar": grammar})
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+def cyk_accepts(grammar, word):
+    r = client.post("/api/cfg/cyk", json={"grammar": grammar, "input": word})
+    assert r.status_code == 200, r.text
+    return r.json()["accepted"]
+
+
+def is_balanced(word):
+    depth = 0
+    for ch in word:
+        depth += 1 if ch == "(" else -1
+        if depth < 0:
+            return False
+    return depth == 0
+
+
+@pytest.mark.parametrize(
+    "grammar, alphabet, member",
+    [
+        ("S -> aSb | ε", "ab", lambda w: re.fullmatch(r"(a*)(b*)", w) and w.count("a") == w.count("b")),
+        ("S → SS | (S) | ε", "()", is_balanced),
+        ("S -> aSa | bSb | λ", "ab", lambda w: w == w[::-1] and len(w) % 2 == 0),
+        ("S -> ASA | aB\nA -> B | S\nB -> b | ε", "ab", None),
+        ("S -> aSbb | A\nA -> c | ε", "abc", lambda w: re.fullmatch(r"(a*)c?(b*)", w) and 2 * w.count("a") == w.count("b")),
+    ],
+)
+def test_cnf_preserves_language(grammar, alphabet, member):
+    result = cnf(grammar)
+    assert result["is_cnf"]
+    assert [s["key"] for s in result["steps"]] == ["original", "start", "epsilon", "unit", "useless", "terminals", "binary"]
+    for line in result["cnf"].splitlines():
+        for body in line.split(" → ")[1].split(" | "):
+            tokens = re.findall(r"[A-Z][₀-₉]*|\S", body.replace(" ", ""))
+            assert body == "ε" or len(tokens) == 1 and not tokens[0][0].isupper() or len(tokens) == 2 and all(t[0].isupper() for t in tokens)
+    if member:
+        for w in words(alphabet, 8):
+            assert cyk_accepts(result["cnf"], w) == bool(member(w)), w
+
+
+def test_cnf_sipser_example_accepts_known_strings():
+    result = cnf("S -> ASA | aB\nA -> B | S\nB -> b | ε")
+    assert result["start"] == "S₀"
+    assert "ε" not in result["cnf"]
+    for w in ["a", "ab", "aa", "aab", "bab"]:
+        assert cyk_accepts(result["cnf"], w), w
+    assert not cyk_accepts(result["cnf"], "")
+    assert not cyk_accepts(result["cnf"], "b")
+
+
+def test_cnf_detects_empty_language_and_useless_symbols():
+    assert cnf("S -> AB\nA -> a\nB -> C\nC -> D")["empty_language"]
+    result = cnf("S -> a | A\nA -> aA\nC -> c")
+    assert result["cnf"] == "S → a"
+
+
+def test_cnf_parse_errors_are_turkish():
+    for text in ["", "S aSb", "s -> a", "ab -> S"]:
+        r = client.post("/api/cfg/cnf", json={"grammar": text or " "})
+        assert r.status_code == 422
+    assert "sol taraf" in client.post("/api/cfg/cnf", json={"grammar": "ab -> a"}).json()["detail"]
+
+
+def test_cyk_requires_cnf_and_known_terminals():
+    r = client.post("/api/cfg/cyk", json={"grammar": "S -> aSb | ε", "input": "ab"})
+    assert r.status_code == 422 and "Chomsky" in r.json()["detail"]
+    r = client.post("/api/cfg/cyk", json={"grammar": "S -> a", "input": "b"})
+    assert r.status_code == 422
+    table = client.post("/api/cfg/cyk", json={"grammar": "S -> AB\nA -> a\nB -> b", "input": "ab"}).json()["table"]
+    assert table == [[["A"], ["B"]], [["S"]]]
+
+
+IMAGE = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+
+
+def test_ai_image_grammar_is_normalized(monkeypatch):
+    reply = json.dumps({"grammar": "S -> aSb | e\nS -> λ", "notes": ""})
+    _fake_client(monkeypatch, {"ana": reply}, ["ana"])
+    r = client.post("/api/ai/image", json={"task": "grammar", "image": IMAGE, "mime_type": "image/png"})
+    assert r.status_code == 200, r.text
+    assert r.json()["grammar"] == "S → aSb | e | ε"
+
+
+def test_ai_image_automaton_returns_exact_regex(monkeypatch):
+    dfa = template(FA_TEMPLATES, FA_TEMPLATES[0]["id"])
+    _fake_client(monkeypatch, {"ana": json.dumps({**dfa, "notes": "net"})}, ["ana"])
+    r = client.post("/api/ai/image", json={"task": "automaton", "image": IMAGE, "mime_type": "image/png"})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["notes"] == "net"
+    assert body["regex"] == client.post("/api/fa/to-regex", json=dfa).json()["regex"]
+
+
+def test_ai_image_question_and_bad_payload(monkeypatch):
+    _fake_client(monkeypatch, {"ana": "**Yanıt**"}, ["ana"])
+    r = client.post("/api/ai/image", json={"task": "question", "image": IMAGE, "question": "Bu nedir?"})
+    assert r.json()["answer"] == "**Yanıt**"
+    r = client.post("/api/ai/image", json={"task": "question", "image": "bu-base64-degil!!!!"})
+    assert r.status_code == 422
+    _fake_client(monkeypatch, {"ana": json.dumps({"grammar": "", "notes": "Görselde kedi var."})}, ["ana"])
+    r = client.post("/api/ai/image", json={"task": "grammar", "image": IMAGE})
+    assert r.status_code == 502 and "kedi" in r.json()["detail"]
+
+
+def test_ai_quota_exhausted_is_reported_and_not_retried(monkeypatch):
+    fake = _fake_client(monkeypatch, {"ana": 429, "yedek": 503}, ["ana", "yedek"])
+    r = client.post("/api/ai/generate", json={"prompt": "herhangi bir dil"})
+    assert r.status_code == 502
+    assert "kotası doldu" in r.json()["detail"]
+    assert fake.calls.count("ana") == 1
+    fake = _fake_client(monkeypatch, {"ana": 429, "yedek": 429}, ["ana", "yedek"])
+    assert "tüm modellerde" in client.post("/api/ai/generate", json={"prompt": "herhangi bir dil"}).json()["detail"]

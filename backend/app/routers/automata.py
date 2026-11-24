@@ -1,9 +1,12 @@
 from fastapi import APIRouter
 
+from app.core import cfg as cfg_core
 from app.core import fa as fa_core
 from app.core import pda as pda_core
 from app.core import tm as tm_core
 from app.schemas import (
+    CFGRequest,
+    CYKRequest,
     FASimulateRequest,
     FASimulateResponse,
     FiniteAutomaton,
@@ -19,6 +22,7 @@ from app.templates import FA_TEMPLATES, PDA_TEMPLATES, TM_TEMPLATES
 fa_router = APIRouter(prefix="/api/fa", tags=["Sonlu Otomatlar"])
 pda_router = APIRouter(prefix="/api/pda", tags=["Yığıtlı Otomat"])
 tm_router = APIRouter(prefix="/api/tm", tags=["Turing Makinesi"])
+cfg_router = APIRouter(prefix="/api/cfg", tags=["Bağlamdan Bağımsız Gramer"])
 
 
 @fa_router.post("/simulate", response_model=FASimulateResponse)
@@ -64,3 +68,13 @@ def tm_simulate(req: TMSimulateRequest):
 @tm_router.get("/templates", response_model=list[Template])
 def tm_templates():
     return TM_TEMPLATES
+
+
+@cfg_router.post("/cnf")
+def cfg_cnf(req: CFGRequest):
+    return cfg_core.to_cnf(req.grammar)
+
+
+@cfg_router.post("/cyk")
+def cfg_cyk(req: CYKRequest):
+    return cfg_core.cyk(req.grammar, req.input)

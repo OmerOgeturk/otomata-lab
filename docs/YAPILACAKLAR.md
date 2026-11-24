@@ -1,6 +1,6 @@
 # Yapılacaklar ve Devam Notları
 
-Son güncelleme: 2026-11-24 — son commit: Faz 4 + gerçek Gemini testi.
+Son güncelleme: 2026-11-24 — son commit: fotoğraftan analiz + Gramer (CNF) sekmesi.
 
 ## Durum özeti
 | Faz | Kapsam | Durum |
@@ -10,6 +10,7 @@ Son güncelleme: 2026-11-24 — son commit: Faz 4 + gerçek Gemini testi.
 | 2 | Frontend iskelet, storageService, Cytoscape DFA/NFA tuvali, Dönüşümler | ✅ Bitti (Edge ile uçtan uca test edildi) |
 | 3 | PDA (canlı yığıt) + Turing Makinesi (canlı şerit) | ✅ Bitti (Edge ile uçtan uca test edildi) |
 | 4 | Yapay Zeka arayüzü + Konu Anlatımı | ✅ Bitti (gerçek Gemini anahtarıyla Edge'de test edildi) |
+| Ek | Fotoğraftan analiz + Gramer (CNF) sekmesi | ✅ Bitti (78 pytest, Edge'de sahte AI ile uçtan uca, gerçek Gemini ile görsel okuma) |
 
 ## Çalışma kuralları (kullanıcı kararları)
 - Her faz bitince commit + `git push`, ardından **kullanıcı onayı beklenir**.
@@ -65,6 +66,13 @@ Tarayıcı testi: geçici bir klasöre `playwright-core` kurup `chromium.launch(
 - [x] `pages/TheoryPage.jsx` — pasif çalışma kartları: Düzenli Diller (tanım, kapanış özellikleri, DFA/NFA/regex denkliği), Pompalama Lemması (düzenli + bağlamdan bağımsız; ispat adımları, formüller, çözümlü örnekler: aⁿbⁿ, ww, aⁿbⁿcⁿ), Bağlamdan Bağımsız Diller (CFG, PDA denkliği), Chomsky Hiyerarşisi (tablo: tür, dilbilgisi, otomat, örnek). Formüller için KaTeX (`katex` npm paketi) kullan.
 - [x] README güncelle, commit + push.
 - [x] **Gerçek Gemini anahtarıyla test:** 5 örnek istemin hepsi 8 karaktere kadar tüm dizelerde doğru otomat üretti; açıklama ve arayüz akışı çalışıyor. `gemini-2.5-flash` yeni kullanıcılara kapalı → varsayılan `gemini-3.8-flash`; yoğunluk (503/504) için yedek model zinciri, 30 sn zaman aşımı ve Türkçe hata mesajları eklendi. Markdown'da `$…$` formülleri KaTeX ile gösteriliyor.
+
+## Ek özellik — Fotoğraftan analiz ve CNF (2026-11-24)
+- [x] `core/cfg.py`: gramer ayrıştırıcı (değişken = büyük harf + `₀`/`_0`/`'` ya da `<Ad>`; diğer her karakter terminal), adım adım CNF (START, DEL, UNIT, gereksizler, TERM, BIN), `is_cnf`, CYK. Uç noktalar `/api/cfg/cnf`, `/api/cfg/cyk`.
+- [x] `/api/ai/image` `{task: grammar|automaton|question, image (base64/data URL), mime_type, question}`: gramer metni okunup sunucuda ayrıştırılarak normalize edilir; otomat okunup doğrulanır ve kesin regex eklenir; soru serbest Markdown yanıt.
+- [x] Frontend: `pages/CFGPage.jsx` (Gramer (CNF) sekmesi), `components/CNFResult.jsx` (adımlar + CYK tablosu), `components/ImageAnalysis.jsx` (sürükle/seç/Ctrl+V, görsel `lib/image.js` ile ≤1600 px'e küçültülür), `components/Explanation.jsx` (AIPage'den ayrıldı).
+- [x] Gemini kotası: ücretsiz anahtarda model başına günde ~20 istek (`GenerateRequestsPerDayPerProjectPerModel-FreeTier`). 429 alan model aynı istekte tekrar denenmez; yedek zinciri uzatıldı, kota dolunca ayrı Türkçe mesaj.
+- Not: OneDrive klasöründe `uvicorn --reload` değişiklikleri her zaman yakalamıyor; yeni uç nokta 404 verirse backend'i yeniden başlat.
 
 ## Son rötuşlar (isteğe bağlı, Faz 4 sonrası)
 - [ ] Toplu test (birden çok dizeyi aynı anda kabul/red listesi).

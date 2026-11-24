@@ -28,7 +28,7 @@ GEMINI_API_KEY=anahtarınız
 ```
 `.env` dosyası `.gitignore` içindedir, GitHub'a gönderilmez. Anahtar her yapay zeka isteğinde `.env` dosyasından yeniden okunur; değiştirmek için dosyayı güncellemeniz yeterlidir (yeniden başlatma gerekmez). Anahtar yokken yapay zeka dışındaki tüm özellikler çalışır.
 
-Model `GEMINI_MODEL` ile seçilir; model yoğun (503) veya zaman aşımına düşerse `GEMINI_FALLBACK_MODELS` listesindeki modeller sırayla denenir (varsayılan `gemini-3.7-flash,gemini-3.1-flash-lite`). Not: `gemini-2.5-flash` yeni kullanıcılara kapatıldığı için varsayılan model güncellendi.
+Model `GEMINI_MODEL` ile seçilir; model yoğun (503), kotası dolmuş (429) veya zaman aşımına düşerse `GEMINI_FALLBACK_MODELS` listesindeki modeller sırayla denenir (varsayılan `gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite`). Ücretsiz anahtarda her modelin günlük ~20 istek kotası ayrıdır; tüm kotalar dolarsa arayüz bunu açıkça bildirir. Not: `gemini-2.5-flash` yeni kullanıcılara kapatıldığı için varsayılan model güncellendi.
 
 ### Frontend
 ```bash
@@ -46,6 +46,8 @@ Uygulama: http://localhost:5173 (geliştirme sunucusu `/api` isteklerini otomati
 - **Yığıtlı Otomat sekmesi:** durumları aynı şekilde çizin; geçiş penceresine her satıra bir kural yazın: `girdi, çek → at` (örn. `a, ε → A`, `ε, $ → $`; `->` de olur). Σ, Γ ve başlangıç yığıt sembolü Z₀ araç çubuğundan ayarlanır. Test sırasında sağdaki **canlı yığıt** her adımda eklenen/çıkarılan sembolleri animasyonla gösterir; sonuç automata-lib NPDA motoruyla doğrulanır. Kabul: girdi bitince kabul durumunda olmak.
 - **Turing Makinesi sekmesi:** doğruluğu kesin klasik makinelerden birini seçin (aⁿbⁿcⁿ, 0ⁿ1ⁿ, ikili +1), girdiyi yazıp *Çalıştır*'a basın. **Canlı şerit** üzerinde okuma/yazma kafası ve yazılan hücreler adım adım izlenir; geçiş tablosunda sıradaki geçiş vurgulanır. Sonsuz döngülere karşı adım sınırı ayarlanabilir. Kendi makinenizi JSON olarak yükleyebilirsiniz (sunucuda doğrulanır).
 - **Yapay Zeka sekmesi:** dili Türkçe tarif edin (örn. “1'lerin sayısı 3'ün katı olan ikili dizeler”), *Otomat üret* ile Gemini otomatı çizsin; önizleyip *Tuvale aktar* ile düzenleyiciye alın. *Otomatın dilini bul* bölümü, tuvaldeki otomatın kesin düzenli ifadesini sunucuda türetir ve Gemini'ye sade bir Türkçe açıklama yazdırır. Sonlu Otomat sekmesindeki *Dilini yapay zekayla açıkla* düğmesi aynı işlemi tek tıkla yapar. Anahtar tanımlı değilse sekme, anahtarın nasıl ekleneceğini gösteren bir kart açar.
+- **Fotoğraftan analiz (Yapay Zeka sekmesi):** fotoğrafı sürükleyin, seçin ya da Ctrl+V ile yapıştırın ve görevi seçin. *Gramer → CNF*: Gemini gramerin metnini okur (düzeltilebilir), dönüşümü sunucu kesin olarak yapar. *Otomat ne iş yapar?*: diyagram okunur, tanıdığı dilin kesin düzenli ifadesi türetilir, Gemini açıklar; otomat tuvale aktarılıp test edilebilir. *Serbest soru*: fotoğraftaki soru ya da şekil hakkında istediğinizi sorun.
+- **Gramer (CNF) sekmesi:** bağlamdan bağımsız grameri yazın (`S → aSb | ε`); yeni başlangıç, ε-kuralları, birim kurallar, gereksiz değişkenler, terminalleri ayırma ve ikiye bölme adımlarıyla Chomsky normal formu çıkarılır. CYK algoritması tablosuyla dize testi yapılır. Yapay zeka gerektirmez.
 - **Konu Anlatımı sekmesi:** Düzenli Diller, Pompalama Lemması (çözümlü aⁿbⁿ, ww, aⁿbⁿcⁿ örnekleriyle), Bağlamdan Bağımsız Diller ve Chomsky Hiyerarşisi kartları; formüller KaTeX ile gösterilir, kartlardan ilgili modüle geçilebilir.
 
 ## Testler
@@ -69,5 +71,8 @@ pytest
 | GET | `/api/ai/status` | Gemini anahtarı tanımlı mı? |
 | POST | `/api/ai/generate` | Doğal dilden otomat (Gemini) |
 | POST | `/api/ai/explain` | Otomatın dilini Türkçe açıklama (Gemini) |
+| POST | `/api/ai/image` | Fotoğraftan gramer/otomat okuma ya da serbest soru (Gemini) |
+| POST | `/api/cfg/cnf` | Gramer → Chomsky normal formu (adım adım) |
+| POST | `/api/cfg/cyk` | CNF gramerde CYK ile üyelik testi |
 
 PDA geçişlerinde `push` dizesinin ilk karakteri yığıtın en üstüne gelir (ör. `AB` → üstte `A`).

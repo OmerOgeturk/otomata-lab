@@ -1,5 +1,5 @@
 import { Suspense, lazy, useState } from 'react'
-import { ArrowRightLeft, BookOpen, Cpu, Layers, Sparkles, Workflow } from 'lucide-react'
+import { ArrowRightLeft, BookOpen, Cpu, Layers, ListTree, Sparkles, Workflow } from 'lucide-react'
 import { useDocument } from './hooks/useDocument'
 import { emptyFA, normalizeFA } from './lib/fa'
 import { ensurePositions } from './lib/graph'
@@ -11,6 +11,7 @@ import PDAPage from './pages/PDAPage'
 import TMPage from './pages/TMPage'
 
 const AIPage = lazy(() => import('./pages/AIPage'))
+const CFGPage = lazy(() => import('./pages/CFGPage'))
 const TheoryPage = lazy(() => import('./pages/TheoryPage'))
 
 const TABS = [
@@ -18,6 +19,7 @@ const TABS = [
   { id: 'convert', label: 'Dönüşümler', icon: ArrowRightLeft },
   { id: 'pda', label: 'Yığıtlı Otomat', icon: Layers },
   { id: 'tm', label: 'Turing Makinesi', icon: Cpu },
+  { id: 'cfg', label: 'Gramer (CNF)', icon: ListTree },
   { id: 'ai', label: 'Yapay Zeka', icon: Sparkles },
   { id: 'theory', label: 'Konu Anlatımı', icon: BookOpen },
 ]
@@ -44,7 +46,14 @@ export default function App() {
   const pda = useDocument('pda', preparePDA)
   const tm = useDocument('tm', prepareTM)
   const [aiState, setAiState] = useState({ prompt: '', generated: null, explanation: null, explainSource: '' })
+  const [imageState, setImageState] = useState({ image: null, task: 'grammar', question: '', result: null })
+  const [cfgState, setCfgState] = useState({ grammar: 'S → aSb | ε', result: null })
   const [autoExplain, setAutoExplain] = useState(false)
+
+  const openGrammar = (grammar) => {
+    setCfgState({ grammar, result: null })
+    setTab('cfg')
+  }
 
   const explainFa = () => {
     setAutoExplain(true)
@@ -96,13 +105,21 @@ export default function App() {
         {tab === 'convert' && <ConvertPage doc={fa.doc} loadDoc={fa.loadDoc} onGoEditor={() => setTab('fa')} />}
         {tab === 'pda' && <PDAPage {...pda} />}
         {tab === 'tm' && <TMPage {...tm} />}
+        {tab === 'cfg' && (
+          <Suspense fallback={<p className="p-6 text-sm text-slate-400">Yükleniyor…</p>}>
+            <CFGPage state={cfgState} setState={setCfgState} />
+          </Suspense>
+        )}
         {tab === 'ai' && (
           <Suspense fallback={<p className="p-6 text-sm text-slate-400">Yükleniyor…</p>}>
             <AIPage
               state={aiState}
               setState={setAiState}
+              imageState={imageState}
+              setImageState={setImageState}
               faDoc={fa.doc}
               onImport={importGenerated}
+              onOpenGrammar={openGrammar}
               autoExplain={autoExplain}
               onAutoExplainDone={() => setAutoExplain(false)}
             />

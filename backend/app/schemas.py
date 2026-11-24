@@ -137,3 +137,27 @@ class AIGenerateRequest(BaseModel):
 class AIExplainResponse(BaseModel):
     regex: str
     explanation: str
+
+
+class CFGRequest(BaseModel):
+    grammar: str = Field(min_length=1, max_length=5000)
+
+
+class CYKRequest(CFGRequest):
+    input: str = Field(default="", max_length=40)
+
+
+class AIImageRequest(BaseModel):
+    task: Literal["grammar", "automaton", "question"]
+    image: str = Field(min_length=16, max_length=14_000_000)
+    mime_type: Literal["image/png", "image/jpeg", "image/webp", "image/heic", "image/heif"] = "image/jpeg"
+    question: str = Field(default="", max_length=1000)
+
+
+class AIImageResponse(BaseModel):
+    task: str
+    notes: str = ""
+    grammar: Optional[str] = None
+    automaton: Optional[FiniteAutomaton] = None
+    regex: Optional[str] = None
+    answer: Optional[str] = None
