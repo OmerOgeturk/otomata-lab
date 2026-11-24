@@ -1,11 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { ArrowRightLeft, BookOpen, Cpu, Layers, Sparkles, Workflow } from 'lucide-react'
 import { Placeholder } from './components/ui'
+import { useDocument } from './hooks/useDocument'
 import { emptyFA, normalizeFA } from './lib/fa'
 import { ensurePositions } from './lib/graph'
+import { emptyPDA, normalizePDA } from './lib/pda'
+import { emptyTM, normalizeTM } from './lib/tm'
 import ConvertPage from './pages/ConvertPage'
 import FAPage from './pages/FAPage'
-import { storageService } from './services/storageService'
+import PDAPage from './pages/PDAPage'
+import TMPage from './pages/TMPage'
 
 const TABS = [
   { id: 'fa', label: 'Sonlu Otomat', icon: Workflow },
@@ -16,39 +20,27 @@ const TABS = [
   { id: 'theory', label: 'Konu Anlatımı', icon: BookOpen },
 ]
 
-const emptyDoc = () => ({ name: '', automaton: emptyFA(), positions: {} })
-
-function prepareDoc(data) {
-  const automaton = normalizeFA(data.automaton ?? emptyFA())
-  return { id: data.id, name: data.name ?? '', automaton, positions: ensurePositions(automaton, data.positions ?? {}) }
+const preparer = (normalize, empty) => (data) => {
+  const automaton = normalize(data.automaton ?? empty())
+  return {
+    id: data.id,
+    name: data.name ?? '',
+    ...(data.templateId ? { templateId: data.templateId } : {}),
+    ...(data.input !== undefined ? { input: data.input } : {}),
+    automaton,
+    positions: ensurePositions(automaton, data.positions ?? {}),
+  }
 }
+
+const prepareFA = preparer(normalizeFA, emptyFA)
+const preparePDA = preparer(normalizePDA, emptyPDA)
+const prepareTM = preparer(normalizeTM, emptyTM)
 
 export default function App() {
   const [tab, setTab] = useState('fa')
-  const [faDoc, setFaDoc] = useState(emptyDoc)
-  const [fitKey, setFitKey] = useState(0)
-  const draftReady = useRef(false)
-
-  useEffect(() => {
-    storageService.loadDraft('fa').then((draft) => {
-      if (draft?.automaton) {
-        setFaDoc(prepareDoc(draft))
-        setFitKey((k) => k + 1)
-      }
-      draftReady.current = true
-    })
-  }, [])
-
-  useEffect(() => {
-    if (!draftReady.current) return
-    const timer = setTimeout(() => storageService.saveDraft('fa', faDoc).catch(() => {}), 400)
-    return () => clearTimeout(timer)
-  }, [faDoc])
-
-  const loadFaDoc = useCallback((data, { keepView } = {}) => {
-    setFaDoc(prepareDoc(data))
-    if (!keepView) setFitKey((k) => k + 1)
-  }, [])
+  const fa = useDocument('fa', prepareFA)
+  const pda = useDocument('pda', preparePDA)
+  const tm = useDocument('tm', prepareTM)
 
   return (
     <div className="flex min-h-full flex-col">
@@ -85,25 +77,11 @@ export default function App() {
 
       <main className="mx-auto w-full max-w-[1600px] flex-1 p-4">
         {tab === 'fa' && (
-          <FAPage
-            doc={faDoc}
-            setDoc={setFaDoc}
-            loadDoc={loadFaDoc}
-            fitKey={fitKey}
-            onGoConvert={() => setTab('convert')}
-          />
+          <FAPage {...fa} onGoConvert={() => setTab('convert')} />
         )}
-        {tab === 'convert' && <ConvertPage doc={faDoc} loadDoc={loadFaDoc} onGoEditor={() => setTab('fa')} />}
-        {tab === 'pda' && (
-          <Placeholder icon={Layers} title="Yığıtlı Otomat (PDA)">
-            Canlı yığıt görselleştirmeli PDA modülü Faz 3'te eklenecek.
-          </Placeholder>
-        )}
-        {tab === 'tm' && (
-          <Placeholder icon={Cpu} title="Turing Makinesi">
-            Canlı şerit ve okuma/yazma kafası simülatörü Faz 3'te eklenecek.
-          </Placeholder>
-        )}
+        {tab === 'convert' && <ConvertPage doc={fa.doc} loadDoc={fa.loadDoc} onGoEditor={() => setTab('fa')} />}
+        {tab === 'pda' && <PDAPage {...pda} />}
+        {tab === 'tm' && <TMPage {...tm} />}
         {tab === 'ai' && (
           <Placeholder icon={Sparkles} title="Yapay Zeka Asistanı">
             Metinden otomat çizimi ve dil açıklama Faz 4'te eklenecek.

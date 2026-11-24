@@ -49,7 +49,7 @@ function NodeInspector({ fa, id, onRename, onSetStart, onToggleAccept, onDelete 
   )
 }
 
-function EdgeInspector({ fa, id, labelFor, onEditEdge, onDelete }) {
+function EdgeInspector({ fa, id, labelFor, onEditEdge, onDelete, editLabel = 'Sembolleri düzenle' }) {
   const edge = fa.transitions.find((t) => edgeId(t.from, t.to) === id)
   if (!edge) return null
   return (
@@ -57,10 +57,10 @@ function EdgeInspector({ fa, id, labelFor, onEditEdge, onDelete }) {
       <p className="font-mono text-sm text-slate-600">
         {edge.from} → {edge.to}
       </p>
-      <p className="rounded-lg bg-slate-50 px-3 py-2 font-mono text-sm text-slate-700">{labelFor(id)}</p>
+      <p className="whitespace-pre-line rounded-lg bg-slate-50 px-3 py-2 font-mono text-sm text-slate-700">{labelFor(id)}</p>
       <div className="flex gap-2">
         <Button className="flex-1" onClick={() => onEditEdge(edge.from, edge.to)}>
-          Sembolleri düzenle
+          {editLabel}
         </Button>
         <Button variant="danger" icon={Trash2} onClick={() => onDelete({ kind: 'edge', id })}>
           Sil

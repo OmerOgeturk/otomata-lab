@@ -1,6 +1,6 @@
 # Yapılacaklar ve Devam Notları
 
-Son güncelleme: 2026-11-24 — son commit: Faz 2 (`1916db0`).
+Son güncelleme: 2026-11-24 — son commit: Faz 3.
 
 ## Durum özeti
 | Faz | Kapsam | Durum |
@@ -8,8 +8,8 @@ Son güncelleme: 2026-11-24 — son commit: Faz 2 (`1916db0`).
 | 0 | Repo, README, .gitignore, spec (`docs/spec.md`) | ✅ Bitti |
 | 1 | Backend: FastAPI + automata-lib + Gemini servisi, 61 pytest | ✅ Bitti |
 | 2 | Frontend iskelet, storageService, Cytoscape DFA/NFA tuvali, Dönüşümler | ✅ Bitti (Edge ile uçtan uca test edildi) |
-| 3 | PDA (canlı yığıt) + Turing Makinesi (canlı şerit) | ⏳ Sıradaki |
-| 4 | Yapay Zeka arayüzü + Konu Anlatımı | ⏳ Bekliyor |
+| 3 | PDA (canlı yığıt) + Turing Makinesi (canlı şerit) | ✅ Bitti (Edge ile uçtan uca test edildi) |
+| 4 | Yapay Zeka arayüzü + Konu Anlatımı | ⏳ Sıradaki |
 
 ## Çalışma kuralları (kullanıcı kararları)
 - Her faz bitince commit + `git push`, ardından **kullanıcı onayı beklenir**.
@@ -41,18 +41,19 @@ Tarayıcı testi: geçici bir klasöre `playwright-core` kurup `chromium.launch(
   - `lib/graph.js` — `toCanvas(machine, labelOf, sep)`, `groupEdges`, `renameIn`, `removeStateIn`, `toggleAcceptIn`, `removeEdgeIn`, `autoLayout`, `ensurePositions`, `nextStateName`, `EPS`, `isEps`, `showEps` (tüm modüller `states/start_state/accept_states/transitions[{from,to}]` yapısını paylaşır).
   - `hooks/useStepper.js` (`useStepper(total, resetKey)`), `components/StepControls.jsx`, `hooks/useTemplates.js`, `components/FileMenu.jsx` (`kind` parametresiyle `pda`, `tm` için de çalışır), `components/ui.jsx` (Button, IconButton, Panel, Field, Alert, Dialog, Badge, Placeholder, `inputClass` — genişlik sınıfını ayrıca ver).
   - `services/storageService.js` — `list/save/load/remove/saveDraft/loadDraft/exportJSON/importJSON(file, kind)`; `kind` = `fa` | `pda` | `tm`.
-  - `App.jsx` — FA dokümanı + taslak otomatik kaydetme burada; PDA/TM için aynı desen (ayrı doc state + `prepareDoc`) eklenmeli. PDA/TM/AI/Konu sekmeleri şu an `Placeholder`.
-- **Bilinen tuzaklar:** Cytoscape kapsayıcıya `position: relative` yazar → kapsayıcı `h-full w-full`, dış sarmalayıcı `absolute inset-0` olmalı. automata-lib'de geçici nesne üzerinde metod çağırmak (`DFA.from_nfa(x).isempty()`) "garbage collected" hatası verir → önce değişkene ata. Windows konsolunda `∅` yazdırmak için `PYTHONIOENCODING=utf-8`.
+  - `hooks/useDocument.js` — `useDocument(kind, prepare)` → `{doc, setDoc, loadDoc, fitKey}`; taslağı yükler/otomatik kaydeder. `App.jsx` üç modül için (`fa`, `pda`, `tm`) kullanıyor; AI/Konu sekmeleri hâlâ `Placeholder`. AI'dan tuvale aktarma: `fa.loadDoc({ name, automaton })` + `setTab('fa')`.
+  - Faz 3 parçaları: `lib/pda.js` (`parseRules`, `pdaRule`, `setEdgeRules`), `lib/tm.js` (`tmTable`, `withAbsolutePositions`), `components/StackView.jsx`, `components/TapeView.jsx`, `pages/PDAPage.jsx`, `pages/TMPage.jsx`. `FAInspector` PDA'da da kullanılıyor (`editLabel` prop'u).
+- **Bilinen tuzaklar:** Cytoscape kapsayıcıya `position: relative` yazar → kapsayıcı `h-full w-full`, dış sarmalayıcı `absolute inset-0` olmalı. automata-lib'de geçici nesne üzerinde metod çağırmak (`DFA.from_nfa(x).isempty()`) "garbage collected" hatası verir → önce değişkene ata. Windows konsolunda `∅` yazdırmak için `PYTHONIOENCODING=utf-8`. automata-lib DTM şeridi sola uzadığında başa boşluk ekler ve `head` 0'da kalır → `withAbsolutePositions` bunu telafi eder. Playwright testinde `getByLabel('Girdi dizesi')` iki öğe bulur (InputTape de aynı etikete sahip) → `input[aria-label=...]` kullan.
 
 ## Faz 3 — PDA ve Turing Makinesi
-- [ ] `lib/pda.js`: `emptyPDA`, `normalizePDA`, etiket ayrıştırma/biçimlendirme `girdi, çek → at` (örn. `a, ε → A`, `ε, $ → $`; `->` ve `→` ikisi de kabul edilsin), geçişleri kenar başına çok satırlı etiket olarak gruplama.
-- [ ] `pages/PDAPage.jsx`: FAPage desenine benzer düzenleyici (modlar, alfabe + yığıt alfabesi + başlangıç yığıt sembolü alanları, şablon menüsü, FileMenu `kind="pda"`), geçiş ekleme diyaloğunda birden çok `girdi, çek → at` satırı.
-- [ ] `components/StackView.jsx`: sağ panelde canlı yığıt; adımlar arasında giren/çıkan sembol animasyonu (push: yukarıdan kayarak, pop: soluklaşarak), tepe işaretçisi.
-- [ ] PDA simülasyon paneli: girdi şeridi (`InputTape`), uygulanan geçiş metni, `verified` (automata-lib doğrulaması) ve `limit_reached` uyarısı.
-- [ ] `lib/tm.js` + `pages/TMPage.jsx`: **şablon tabanlı** (spec: serbest çizim yok) — şablon seçici, salt okunur graf (durum + geçiş vurgusu), geçiş tablosu (durum × okunan sembol → yaz/hareket/hedef).
-- [ ] `components/TapeView.jsx`: canlı şerit hücreleri + okuma/yazma kafası, kafa L/R hareketi ve yazılan hücre animasyonu, şerit görünür pencere içinde kafayı ortalama; sonuç (kabul/red/adım sınırı) ve çıktı (`output`).
-- [ ] App.jsx: PDA/TM doküman state'i + taslak kaydetme; Placeholder'ları kaldır.
-- [ ] `npm run build`, Edge ile uçtan uca test (aⁿbⁿ `aabb` kabul / `aab` red; TM `aabbcc` kabul, ikili +1 `1011` → `1100`), README güncelle, commit + push, onay bekle.
+- [x] `lib/pda.js`: `emptyPDA`, `normalizePDA`, etiket ayrıştırma/biçimlendirme `girdi, çek → at` (örn. `a, ε → A`, `ε, $ → $`; `->` ve `→` ikisi de kabul edilsin), geçişleri kenar başına çok satırlı etiket olarak gruplama.
+- [x] `pages/PDAPage.jsx`: FAPage desenine benzer düzenleyici (modlar, alfabe + yığıt alfabesi + başlangıç yığıt sembolü alanları, şablon menüsü, FileMenu `kind="pda"`), geçiş ekleme diyaloğunda birden çok `girdi, çek → at` satırı.
+- [x] `components/StackView.jsx`: sağ panelde canlı yığıt; adımlar arasında giren/çıkan sembol animasyonu (push: yukarıdan kayarak, pop: soluklaşarak), tepe işaretçisi.
+- [x] PDA simülasyon paneli: girdi şeridi (`InputTape`), uygulanan geçiş metni, `verified` (automata-lib doğrulaması) ve `limit_reached` uyarısı.
+- [x] `lib/tm.js` + `pages/TMPage.jsx`: **şablon tabanlı** (spec: serbest çizim yok) — şablon seçici, salt okunur graf (durum + geçiş vurgusu), geçiş tablosu (durum × okunan sembol → yaz/hareket/hedef).
+- [x] `components/TapeView.jsx`: canlı şerit hücreleri + okuma/yazma kafası, kafa L/R hareketi ve yazılan hücre animasyonu, şerit görünür pencere içinde kafayı ortalama; sonuç (kabul/red/adım sınırı) ve çıktı (`output`).
+- [x] App.jsx: PDA/TM doküman state'i + taslak kaydetme; Placeholder'ları kaldır.
+- [x] `npm run build`, Edge ile uçtan uca test (aⁿbⁿ `aabb` kabul / `aab` red; TM `aabbcc` kabul, ikili +1 `1011` → `1100`), README güncelle, commit + push, onay bekle.
 
 ## Faz 4 — Yapay Zeka ve Konu Anlatımı
 - [ ] `pages/AIPage.jsx` — **Metinden otomat:** metin kutusu + örnek istemler → `api.ai.generate(prompt)` → sonucu önizle ve "Tuvale aktar" (App'teki `loadFaDoc` + sekmeyi `fa` yap).

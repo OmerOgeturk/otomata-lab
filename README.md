@@ -36,11 +36,13 @@ npm run dev
 ```
 Uygulama: http://localhost:5173 (geliştirme sunucusu `/api` isteklerini otomatik olarak `localhost:8000`'e yönlendirir; backend'in açık olması gerekir).
 
-## Kullanım (Faz 2)
+## Kullanım
 - **Sonlu Otomat sekmesi:** araç çubuğundan *Durum ekle* modunu seçip tuvale tıklayın, *Geçiş ekle* modunda kaynak ve hedef duruma tıklayıp sembolleri girin (`0,1`; ε-NFA'da `ε` veya `eps`). Bir durumu seçerek başlangıç/kabul durumu yapabilir, yeniden adlandırabilirsiniz.
 - **Test:** girdi dizesini yazıp *Test et*'e basın; oynat/ileri/geri ile aktif durum ve kullanılan geçişler adım adım vurgulanır.
 - **Dönüşümler sekmesi:** NFA → DFA, minimizasyon ve düzenli ifade; sonucu tek tıkla tuvale aktarabilirsiniz.
 - **Kaydetme:** çalışma alanı tarayıcıya otomatik taslak olarak kaydedilir. Ayrıca adlandırılmış kayıt, JSON indirme ve yükleme vardır. Tüm kayıt işlemleri `frontend/src/services/storageService.js` üzerinden yapılır; ileride Supabase vb. için yalnızca `setStorageAdapter` ile yeni bir adaptör vermek yeterlidir.
+- **Yığıtlı Otomat sekmesi:** durumları aynı şekilde çizin; geçiş penceresine her satıra bir kural yazın: `girdi, çek → at` (örn. `a, ε → A`, `ε, $ → $`; `->` de olur). Σ, Γ ve başlangıç yığıt sembolü Z₀ araç çubuğundan ayarlanır. Test sırasında sağdaki **canlı yığıt** her adımda eklenen/çıkarılan sembolleri animasyonla gösterir; sonuç automata-lib NPDA motoruyla doğrulanır. Kabul: girdi bitince kabul durumunda olmak.
+- **Turing Makinesi sekmesi:** doğruluğu kesin klasik makinelerden birini seçin (aⁿbⁿcⁿ, 0ⁿ1ⁿ, ikili +1), girdiyi yazıp *Çalıştır*'a basın. **Canlı şerit** üzerinde okuma/yazma kafası ve yazılan hücreler adım adım izlenir; geçiş tablosunda sıradaki geçiş vurgulanır. Sonsuz döngülere karşı adım sınırı ayarlanabilir. Kendi makinenizi JSON olarak yükleyebilirsiniz (sunucuda doğrulanır).
 
 ## Testler
 ```bash
