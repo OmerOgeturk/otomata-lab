@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { FileText, Info, ListTree, Wand2 } from 'lucide-react'
 import CNFResult from '../components/CNFResult'
-import { Alert, Button, Panel, inputClass } from '../components/ui'
+import GrammarInput from '../components/GrammarInput'
+import RegularGrammar from '../components/RegularGrammar'
+import { Alert, Button, Panel } from '../components/ui'
 import { api } from '../services/api'
 
 const EXAMPLES = [
@@ -12,8 +14,8 @@ const EXAMPLES = [
   { name: 'Aritmetik ifade', grammar: 'E → E+T | T\nT → T*F | F\nF → (E) | a' },
 ]
 
-export default function CFGPage({ state, setState }) {
-  const { grammar, result } = state
+export default function CFGPage({ state, setState, faDoc, onImport }) {
+  const { grammar, result, mode = 'cnf' } = state
   const set = (patch) => setState((s) => ({ ...s, ...patch }))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -40,19 +42,30 @@ export default function CFGPage({ state, setState }) {
         <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
           <ListTree className="h-5 w-5 text-indigo-500" /> Bağlamdan Bağımsız Gramer
         </h2>
-        <p className="text-sm text-slate-500">Grameri yazın; Chomsky normal formuna adım adım dönüştürülsün ve CYK ile dize testi yapın. Yapay zeka gerektirmez.</p>
+        <p className="text-sm text-slate-500">Chomsky normal formu ve CYK testi ya da düzenli gramer ↔ NFA dönüşümü (kitap bölüm 7.2–7.3). Yapay zeka gerektirmez.</p>
       </div>
-      {error && <Alert onClose={() => setError('')}>{error}</Alert>}
+      <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Gramer araçları">
+        <Button active={mode === 'cnf'} role="tab" aria-selected={mode === 'cnf'} onClick={() => set({ mode: 'cnf' })}>
+          Chomsky normal formu
+        </Button>
+        <Button active={mode === 'regular'} role="tab" aria-selected={mode === 'regular'} onClick={() => set({ mode: 'regular' })}>
+          Düzenli gramer ↔ NFA
+        </Button>
+      </div>
+      {mode === 'regular' && (
+        <RegularGrammar state={state.regular} setState={(fn) => setState((s) => ({ ...s, regular: typeof fn === 'function' ? fn(s.regular) : fn }))} faDoc={faDoc} onImport={onImport} />
+      )}
+      {mode === 'cnf' && error && <Alert onClose={() => setError('')}>{error}</Alert>}
+      {mode === 'cnf' && (
       <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
         <Panel title="Gramer" icon={FileText}>
           <div className="space-y-3">
-            <textarea
-              className={`${inputClass} block min-h-40 w-full resize-y font-mono`}
+            <GrammarInput
+              className="min-h-40"
               value={grammar}
-              spellCheck={false}
               placeholder={'S → aSb | ε'}
-              onChange={(e) => set({ grammar: e.target.value })}
-              onKeyDown={(e) => e.key === 'Enter' && (e.ctrlKey || e.metaKey) && convert()}
+              onChange={(v) => set({ grammar: v })}
+              onSubmit={() => convert()}
               aria-label="Gramer kuralları"
             />
             <div className="flex flex-wrap gap-1.5">
@@ -79,7 +92,7 @@ export default function CFGPage({ state, setState }) {
             <div className="flex items-start gap-2 rounded-lg bg-slate-50 p-3 text-xs text-slate-500 ring-1 ring-slate-200">
               <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               <ul className="space-y-0.5">
-                <li>Her satıra bir değişken: <code className="font-mono">S → aSb | ε</code> (ok için <code className="font-mono">-&gt;</code> da yazılabilir).</li>
+                <li>Her satıra bir değişken: <code className="font-mono">S → aSb | ε</code> · kısayollar: <kbd>Alt+1</kbd> →, <kbd>Alt+2</kbd> |, <kbd>Alt+3</kbd> ε.</li>
                 <li>Değişkenler büyük harf (<code className="font-mono">A, S₀, S_0, A'</code>) ya da <code className="font-mono">&lt;İfade&gt;</code>; diğer her karakter bir terminaldir.</li>
                 <li>Boş dize için <code className="font-mono">ε</code>, <code className="font-mono">λ</code> veya <code className="font-mono">eps</code>. İlk satırın solu başlangıç değişkenidir.</li>
               </ul>
@@ -90,6 +103,7 @@ export default function CFGPage({ state, setState }) {
           {result ? <CNFResult result={result} /> : <p className="text-sm text-slate-500">Bir gramer yazıp dönüştürün ya da soldaki örneklerden birini seçin.</p>}
         </Panel>
       </div>
+      )}
     </div>
   )
 }

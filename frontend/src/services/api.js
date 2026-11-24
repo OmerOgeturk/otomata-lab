@@ -53,5 +53,7 @@ export const api = {
   cfg: {
     cnf: (grammar) => request('/api/cfg/cnf', { grammar }),
     cyk: (grammar, input) => request('/api/cfg/cyk', { grammar, input }),
+    regularToNfa: (grammar) => request('/api/cfg/regular-to-nfa', { grammar }),
+    nfaToRegular: (automaton) => request('/api/cfg/nfa-to-regular', automaton),
   },
 }

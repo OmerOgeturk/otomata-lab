@@ -86,3 +86,13 @@ def cfg_cnf(req: CFGRequest):
 @cfg_router.post("/cyk")
 def cfg_cyk(req: CYKRequest):
     return cfg_core.cyk(req.grammar, req.input)
+
+
+@cfg_router.post("/regular-to-nfa")
+def cfg_regular_to_nfa(req: CFGRequest):
+    return cfg_core.regular_to_nfa(req.grammar)
+
+
+@cfg_router.post("/nfa-to-regular")
+def cfg_nfa_to_regular(automaton: FiniteAutomaton):
+    return cfg_core.nfa_to_regular(automaton)

@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from itertools import product
 
 from app.core.common import EPSILON, AutomatonError, is_epsilon, require
+from app.schemas import FATransition, FiniteAutomaton
 
 ARROW = re.compile(r"->|→|::=|=>|⟶")
 TOKEN = re.compile(r"<[^<>\s]+>|[A-Z](?:_[0-9]+|[₀-₉]+|')*|\S")
@@ -349,4 +350,107 @@ def cyk(text: str, word: str) -> dict:
     }
 
 
-__all__ = ["AutomatonError", "Grammar", "parse", "format_grammar", "to_cnf", "cyk", "is_cnf"]
+
+def regular_to_nfa(text: str) -> dict:
+    grammar = parse(text)
+    variables = grammar.variables()
+    accept = next(n for n in ["F", "F'", "q_f", "Son"] if n not in variables)
+    transitions = []
+    for head, bodies in grammar.rules.items():
+        for body in bodies:
+            shown = f"{head} → {_join(body)}"
+            if len(body) == 0:
+                transitions.append((head, EPSILON, accept))
+            elif len(body) == 1 and not is_variable(body[0]):
+                transitions.append((head, body[0], accept))
+            elif len(body) == 2 and not is_variable(body[0]) and is_variable(body[1]):
+                transitions.append((head, body[0], body[1]))
+            else:
+                raise AutomatonError(
+                    f"'{shown}' düzenli gramer kuralı değil. İzin verilen biçimler: A → aB, A → a, A → ε."
+                )
+    states = [grammar.start] + sorted(variables - {grammar.start}) + [accept]
+    alphabet = sorted({sym for _, sym, _ in transitions if sym != EPSILON})
+    require(alphabet, "Gramerde hiç terminal yok; NFA kurulamaz.")
+    has_epsilon = any(sym == EPSILON for _, sym, _ in transitions)
+    automaton = FiniteAutomaton(
+        type="ENFA" if has_epsilon else "NFA",
+        states=states,
+        alphabet=alphabet,
+        start_state=grammar.start,
+        accept_states=[accept],
+        transitions=[FATransition(**{"from": a, "to": b, "symbol": sym}) for a, sym, b in transitions],
+    )
+    mapping = [{"rule": f"{a} → {'ε' if sym == EPSILON else sym}{'' if b == accept else b}", "transition": f"δ({a}, {sym}) ∋ {b}"} for a, sym, b in transitions]
+    return {"automaton": automaton, "accept_state": accept, "mapping": mapping}
+
+
+def _variable_names(states: list[str], start: str) -> dict[str, str]:
+    if all(is_variable(state) for state in states):
+        return {state: state for state in states}
+    names = {start: "S"}
+    pool = [c for c in "ABCDEFGHIJKLMNOPQRTUVWXYZ"]
+    index = 1
+    for state in states:
+        if state in names:
+            continue
+        if pool:
+            names[state] = pool.pop(0)
+        else:
+            names[state] = "X" + str(index).translate(SUBSCRIPTS)
+            index += 1
+    return names
+
+
+def nfa_to_regular(automaton: FiniteAutomaton) -> dict:
+    from app.core import fa as fa_core
+
+    edges = fa_core.validate(automaton)
+    epsilon: dict[str, set[str]] = {}
+    moves: dict[str, set[tuple[str, str]]] = {}
+    for src, sym, dst in edges:
+        if sym == "":
+            epsilon.setdefault(src, set()).add(dst)
+        else:
+            moves.setdefault(src, set()).add((sym, dst))
+
+    def closure(state: str) -> list[str]:
+        seen = [state]
+        for current in seen:
+            for nxt in sorted(epsilon.get(current, ())):
+                if nxt not in seen:
+                    seen.append(nxt)
+        return seen
+
+    accept = set(automaton.accept_states)
+    reachable = [automaton.start_state]
+    rules: dict[str, list[tuple[str, str]]] = {}
+    finals: set[str] = set()
+    for state in reachable:
+        reach = closure(state)
+        if accept & set(reach):
+            finals.add(state)
+        out = sorted({move for r in reach for move in moves.get(r, ())})
+        rules[state] = out
+        for _, dst in out:
+            if dst not in reachable:
+                reachable.append(dst)
+    names = _variable_names(reachable, automaton.start_state)
+    lines = []
+    for state in reachable:
+        bodies = [f"{sym}{names[dst]}" for sym, dst in rules[state]]
+        if state in finals:
+            bodies.append(EPSILON)
+        if bodies:
+            lines.append(f"{names[state]} → {' | '.join(bodies)}")
+    unreachable = [s for s in automaton.states if s not in reachable]
+    return {
+        "grammar": "\n".join(lines) if lines else f"{names[automaton.start_state]} → ∅",
+        "mapping": [{"state": s, "variable": names[s], "accepting": s in finals} for s in reachable],
+        "removed_epsilon": bool(epsilon),
+        "unreachable": unreachable,
+        "empty_language": not finals,
+    }
+
+
+__all__ = ["AutomatonError", "Grammar", "parse", "format_grammar", "to_cnf", "cyk", "is_cnf", "regular_to_nfa", "nfa_to_regular"]

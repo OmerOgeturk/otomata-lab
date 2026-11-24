@@ -484,3 +484,40 @@ def test_language_algebra_book_descriptions():
     names = [l["description"] for l in r.json()["languages"]]
     assert names[0] == "tam 2 tane a içeren dizeler"
     assert names[3] == "uzunluğu en az 3 olan ve uzunluğu en çok 5 olan dizeler"
+
+
+REGULAR_GRAMMARS = [
+    ("S -> aA | bB; A -> cA | cD; B -> aC; C -> bA; D -> bD | cD | ε", "abc", lambda w: re.fullmatch(r"(a|bab)c+(b|c)*", w)),
+    ("S -> 1A | ε; A -> 0S", "01", lambda w: re.fullmatch(r"(10)*", w)),
+    ("S -> 0A; A -> 1B; B -> 0 | 1A", "01", lambda w: re.fullmatch(r"01(11)*0", w)),
+]
+
+
+@pytest.mark.parametrize("grammar, alphabet, member", REGULAR_GRAMMARS)
+def test_regular_grammar_to_nfa_and_back(grammar, alphabet, member):
+    r = client.post("/api/cfg/regular-to-nfa", json={"grammar": grammar})
+    assert r.status_code == 200, r.text
+    nfa = r.json()["automaton"]
+    back = client.post("/api/cfg/nfa-to-regular", json=nfa).json()
+    nfa2 = client.post("/api/cfg/regular-to-nfa", json={"grammar": back["grammar"]}).json()["automaton"]
+    for w in words(alphabet, 7):
+        expected = bool(member(w))
+        assert fa_accepts(nfa, w) == expected, w
+        assert fa_accepts(nfa2, w) == expected, w
+
+
+def test_nfa_to_regular_from_templates_roundtrip():
+    for t in FA_TEMPLATES:
+        fa = t["automaton"]
+        out = client.post("/api/cfg/nfa-to-regular", json=fa).json()
+        if out["empty_language"]:
+            continue
+        nfa = client.post("/api/cfg/regular-to-nfa", json={"grammar": out["grammar"]}).json()["automaton"]
+        for w in words(fa["alphabet"], 6):
+            assert fa_accepts(nfa, w) == fa_accepts(fa, w), (t["id"], w)
+
+
+def test_regular_grammar_rejects_non_regular_rules():
+    for g in ["S -> aSb | ε", "S -> Ab; A -> a", "S -> A; A -> a", "S -> abA"]:
+        r = client.post("/api/cfg/regular-to-nfa", json={"grammar": g})
+        assert r.status_code == 422 and "düzenli gramer kuralı değil" in r.json()["detail"], g

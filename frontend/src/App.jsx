@@ -49,7 +49,12 @@ export default function App() {
   const tm = useDocument('tm', prepareTM)
   const [aiState, setAiState] = useState({ prompt: '', generated: null, explanation: null, explainSource: '' })
   const [imageState, setImageState] = useState({ image: null, task: 'grammar', question: '', result: null })
-  const [cfgState, setCfgState] = useState({ grammar: 'S → aSb | ε', result: null })
+  const [cfgState, setCfgState] = useState({
+    mode: 'cnf',
+    grammar: 'S → aSb | ε',
+    result: null,
+    regular: { grammar: 'S → aA | bB\nA → cA | cD\nB → aC\nC → bA\nD → bD | cD | ε', nfa: null, fromFa: null },
+  })
   const [algebraState, setAlgebraState] = useState({
     alphabet: '0, 1',
     languages: [
@@ -68,7 +73,7 @@ export default function App() {
   }
 
   const openGrammar = (grammar) => {
-    setCfgState({ grammar, result: null })
+    setCfgState((s) => ({ ...s, mode: 'cnf', grammar, result: null }))
     setTab('cfg')
   }
 
@@ -129,7 +134,7 @@ export default function App() {
         )}
         {tab === 'cfg' && (
           <Suspense fallback={<p className="p-6 text-sm text-slate-400">Yükleniyor…</p>}>
-            <CFGPage state={cfgState} setState={setCfgState} />
+            <CFGPage state={cfgState} setState={setCfgState} faDoc={fa.doc} onImport={importAutomaton} />
           </Suspense>
         )}
         {tab === 'ai' && (

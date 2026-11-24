@@ -129,6 +129,7 @@ function CYKTester({ grammar }) {
 export default function CNFResult({ result }) {
   const [open, setOpen] = useState(() => new Set(result.steps.filter((s) => s.changed !== false).map((s) => s.key)))
   useEffect(() => setOpen(new Set(result.steps.filter((s) => s.changed !== false).map((s) => s.key))), [result])
+  const [summaryOpen, setSummaryOpen] = useState(false)
   const toggle = (key) =>
     setOpen((prev) => {
       const next = new Set(prev)
@@ -137,18 +138,29 @@ export default function CNFResult({ result }) {
     })
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2">
+      <div className="rounded-lg ring-1 ring-indigo-200">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5">
+          <button
+            type="button"
+            onClick={() => setSummaryOpen((v) => !v)}
+            className="flex flex-1 flex-wrap items-center gap-2 py-0.5 text-left"
+            aria-expanded={summaryOpen}
+          >
+            <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${summaryOpen ? '' : '-rotate-90'}`} />
             <span className="text-sm font-semibold text-slate-700">Chomsky normal formu</span>
             {result.empty_language ? <Badge tone="amber">Dil boş (∅)</Badge> : <Badge tone="green">CNF ✓</Badge>}
             <span className="text-xs text-slate-500">
               {result.rule_count} kural · {result.variables.length} değişken · başlangıç {result.start}
             </span>
-          </div>
+            {!summaryOpen && <span className="text-xs text-indigo-600">göster</span>}
+          </button>
           {result.cnf && <CopyButton text={result.cnf} />}
         </div>
-        <GrammarBlock text={result.cnf} highlight />
+        {summaryOpen && (
+          <div className="border-t border-indigo-100 p-2">
+            <GrammarBlock text={result.cnf} highlight />
+          </div>
+        )}
       </div>
       <div className="space-y-2">
         <p className="text-xs font-medium text-slate-500">Dönüşüm adımları</p>

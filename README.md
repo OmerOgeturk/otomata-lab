@@ -48,7 +48,8 @@ Uygulama: http://localhost:5173 (geliştirme sunucusu `/api` isteklerini otomati
 - **Yapay Zeka sekmesi:** dili Türkçe tarif edin (örn. “1'lerin sayısı 3'ün katı olan ikili dizeler”), *Otomat üret* ile Gemini otomatı çizsin; önizleyip *Tuvale aktar* ile düzenleyiciye alın. *Otomatın dilini bul* bölümü, tuvaldeki otomatın kesin düzenli ifadesini sunucuda türetir ve Gemini'ye sade bir Türkçe açıklama yazdırır. Sonlu Otomat sekmesindeki *Dilini yapay zekayla açıkla* düğmesi aynı işlemi tek tıkla yapar. Anahtar tanımlı değilse sekme, anahtarın nasıl ekleneceğini gösteren bir kart açar.
 - **Fotoğraftan analiz (Yapay Zeka sekmesi):** fotoğrafı sürükleyin, seçin ya da Ctrl+V ile yapıştırın ve görevi seçin. *Gramer → CNF*: Gemini gramerin metnini okur (düzeltilebilir), dönüşümü sunucu kesin olarak yapar. *Otomat ne iş yapar?*: diyagram okunur, tanıdığı dilin kesin düzenli ifadesi türetilir, Gemini açıklar; otomat tuvale aktarılıp test edilebilir. *Serbest soru*: fotoğraftaki soru ya da şekil hakkında istediğinizi sorun.
 - **Dil İşlemleri sekmesi:** dilleri tanımlayın (örn. A = `00` içerir **ve** `11` içermez, C = `000` içermez; ayrıca ile başlar/biter, tam/en az/en çok k tane sembol, uzunluk tam/en az/en çok k, uzunluk ≡ r (mod k), sembol sayısı ≡ r (mod k), düzenli ifade ya da tuvaldeki otomat). Bir dile birden çok koşul eklenip *ve*/*veya* ile bağlanabilir ve `(A∪B)*C` gibi bir ifade yazın. Birleşim (∪, U, |), kesişim (∩), fark (−), art arda ekleme (yan yana), yıldız (*), pozitif kapanış (⁺ ya da +, en az bir kez) ve tümleme (ᶜ) desteklenir. Sonucu tanıyan minimal DFA, eşdeğer düzenli ifade ve her ara adımın durum sayısı gösterilir; sonuç Σ* ya da ∅ ise ayrıca belirtilir.
-- **Gramer (CNF) sekmesi:** bağlamdan bağımsız grameri yazın (`S → aSb | ε`); yeni başlangıç, ε-kuralları, birim kurallar, gereksiz değişkenler, terminalleri ayırma ve ikiye bölme adımlarıyla Chomsky normal formu çıkarılır. CYK algoritması tablosuyla dize testi yapılır. Yapay zeka gerektirmez.
+- **Gramer (CNF) sekmesi:** bağlamdan bağımsız grameri yazın (`S → aSb | ε`); yeni başlangıç, ε-kuralları, birim kurallar, gereksiz değişkenler, terminalleri ayırma ve ikiye bölme adımlarıyla Chomsky normal formu çıkarılır. CYK algoritması tablosuyla dize testi yapılır. *Düzenli gramer ↔ NFA* modunda A → aB | a | ε biçimindeki gramer NFA'ya (her değişken bir durum, tek ek kabul durumu) ve tuvaldeki otomat düzenli gramere çevrilir. Yapay zeka gerektirmez.
+- **Konu Anlatımı sekmesi:** ders kitabının hafta sırasıyla 11 konu: sonlu otomatlar, NFA, düzenli diller, düzenli ifadeler, pompalama lemması, CFG/PDA, gramer biçimleri (CNF, düzenli gramer), Turing makineleri, karar verilemezlik, P/NP ve Chomsky hiyerarşisi. Formüller KaTeX ile; her konudan ilgili sekmeye kısayol.
 - **Konu Anlatımı sekmesi:** Düzenli Diller, Pompalama Lemması (çözümlü aⁿbⁿ, ww, aⁿbⁿcⁿ örnekleriyle), Bağlamdan Bağımsız Diller ve Chomsky Hiyerarşisi kartları; formüller KaTeX ile gösterilir, kartlardan ilgili modüle geçilebilir.
 
 ## Testler
@@ -76,5 +77,7 @@ pytest
 | POST | `/api/fa/algebra` | Tanımlı dillerle küme işlemleri → minimal DFA |
 | POST | `/api/cfg/cnf` | Gramer → Chomsky normal formu (adım adım) |
 | POST | `/api/cfg/cyk` | CNF gramerde CYK ile üyelik testi |
+| POST | `/api/cfg/regular-to-nfa` | Düzenli gramer → NFA |
+| POST | `/api/cfg/nfa-to-regular` | Sonlu otomat → düzenli gramer |
 
 PDA geçişlerinde `push` dizesinin ilk karakteri yığıtın en üstüne gelir (ör. `AB` → üstte `A`).

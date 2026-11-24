@@ -1,6 +1,6 @@
 # Yapılacaklar ve Devam Notları
 
-Son güncelleme: 2026-11-24 — son commit: kaynak kitaba göre koşul türleri ve + notasyonu.
+Son güncelleme: 2026-11-24 — son commit: bölüm 7.3 (düzenli gramer ↔ NFA) ve kitap sıralı Konu Anlatımı.
 
 ## Durum özeti
 | Faz | Kapsam | Durum |
@@ -86,7 +86,9 @@ Tarayıcı testi: geçici bir klasöre `playwright-core` kurup `chromium.launch(
 - Ucuz inceleme: `pdftotext -layout` ile scratchpad'e metin çıkar, `grep` ile hedefli tara (matematik sembolleri metinde kayboluyor).
 - Notasyon: birleşim ∪, boş dize ε, `+` = en az bir kez (a⁺); CNF tanımı bizimkiyle aynı (yeni başlangıç, yalnızca S → ε). Uygulama buna uyduruldu: `+` artık birleşim değil.
 - [x] Kitap alıştırmalarına göre eklenen koşullar: tam/en az/en çok k tane sembol (`count_exact|min|max`, değer `a,2`), uzunluk tam/en az/en çok (`length_exact|min|max`). `_minimal` kısmi DFA'yı önce tamamlar (`from_nfa` kısmi üretebiliyor).
-- [ ] İsteğe bağlı fikirler: Konu Anlatımı'na kitabın bölüm sırası/terimleri; düzenli gramer (7.3) ↔ NFA dönüşümü; CFG basitleştirme (7.1) adımları zaten CNF'de var; pompalama lemması alıştırma kartları.
+- [x] Bölüm 7.3: `cfg.regular_to_nfa` (A → aB | a | ε; tek ek kabul durumu F, A → ε için ε-geçişi → ε-NFA) ve `cfg.nfa_to_regular` (ε-kapanışla ε kaldırılır, Q → aP ve kabul için Q → ε; durum adları zaten değişken biçimindeyse korunur). Gramer sekmesinde `RegularGrammar.jsx` modu.
+- [x] Konu Anlatımı kitap sırasıyla: `pages/theory/chapters.jsx` (H1, H2, H4, H7, H10–11, H12, H13–14), mevcut Regular/Pumping/ContextFree/Hierarchy yerinde; ortak parçalar `components/theory.jsx`; yan menü + önceki/sonraki.
+- [ ] İsteğe bağlı: pompalama lemması alıştırma kartları; PDA ↔ CFG dönüşümü (8.2).
 
 ## Son rötuşlar (isteğe bağlı, Faz 4 sonrası)
 - [ ] Toplu test (birden çok dizeyi aynı anda kabul/red listesi).

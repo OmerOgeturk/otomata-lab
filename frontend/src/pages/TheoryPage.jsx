@@ -1,34 +1,9 @@
 import { useState } from 'react'
-import { ArrowRight, BookOpen, CheckCircle2, Layers, Pyramid, Repeat, Workflow, XCircle } from 'lucide-react'
+import { BookOpen, CheckCircle2, ChevronLeft, ChevronRight, XCircle } from 'lucide-react'
 import Tex from '../components/Tex'
+import { Card, Steps, TryIt } from '../components/theory'
+import { Week1, Week10, Week12, Week13, Week2, Week4, Week7 } from './theory/chapters'
 import { Button } from '../components/ui'
-
-function Card({ title, children, tone = 'default' }) {
-  const tones = {
-    default: 'bg-white ring-slate-200',
-    example: 'bg-emerald-50/50 ring-emerald-200',
-    note: 'bg-indigo-50/60 ring-indigo-200',
-  }
-  return (
-    <section className={`rounded-xl p-5 shadow-sm ring-1 ${tones[tone]}`}>
-      <h3 className="mb-3 font-semibold text-slate-900">{title}</h3>
-      <div className="space-y-3 text-sm leading-relaxed text-slate-700">{children}</div>
-    </section>
-  )
-}
-
-function Steps({ items }) {
-  return (
-    <ol className="space-y-2">
-      {items.map((item, i) => (
-        <li key={i} className="flex gap-3">
-          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white">{i + 1}</span>
-          <div className="pt-0.5">{item}</div>
-        </li>
-      ))}
-    </ol>
-  )
-}
 
 function Closure({ rows }) {
   return (
@@ -52,14 +27,6 @@ function Closure({ rows }) {
         ))}
       </tbody>
     </table>
-  )
-}
-
-function TryIt({ label, onClick }) {
-  return (
-    <Button icon={ArrowRight} onClick={onClick} className="mt-1">
-      {label}
-    </Button>
   )
 }
 
@@ -455,40 +422,95 @@ function Hierarchy({ go }) {
   )
 }
 
-const TOPICS = [
-  { id: 'regular', label: 'Düzenli Diller', icon: Workflow, Component: Regular },
-  { id: 'pumping', label: 'Pompalama Lemması', icon: Repeat, Component: Pumping },
-  { id: 'cfl', label: 'Bağlamdan Bağımsız Diller', icon: Layers, Component: ContextFree },
-  { id: 'chomsky', label: 'Chomsky Hiyerarşisi', icon: Pyramid, Component: Hierarchy },
+const UNITS = [
+  {
+    title: 'I · Düzenli Diller',
+    topics: [
+      { id: 'w1', week: '1', label: 'Sonlu Otomatlar', Component: Week1 },
+      { id: 'w2', week: '2', label: 'Belirsizlik (NFA)', Component: Week2 },
+      { id: 'regular', week: '3', label: 'Düzenli Diller ve Kapanış', Component: Regular },
+      { id: 'w4', week: '4', label: 'Düzenli İfadeler', Component: Week4 },
+      { id: 'pumping', week: '5', label: 'Pompalama Lemması', Component: Pumping },
+    ],
+  },
+  {
+    title: 'II · Bağlamdan Bağımsız Diller',
+    topics: [
+      { id: 'cfl', week: '6·8·9', label: 'CFG, PDA ve Kapanış', Component: ContextFree },
+      { id: 'w7', week: '7', label: 'Gramer Biçimleri (CNF, Düzenli Gramer)', Component: Week7 },
+    ],
+  },
+  {
+    title: 'III · Hesaplanabilirlik',
+    topics: [
+      { id: 'w10', week: '10·11', label: 'Turing Makineleri', Component: Week10 },
+      { id: 'w12', week: '12', label: 'Karar Verilemezlik', Component: Week12 },
+    ],
+  },
+  {
+    title: 'IV · Karmaşıklık',
+    topics: [{ id: 'w13', week: '13·14', label: 'P, NP ve NP-Tamlık', Component: Week13 }],
+  },
+  {
+    title: 'Özet',
+    topics: [{ id: 'chomsky', week: '★', label: 'Chomsky Hiyerarşisi', Component: Hierarchy }],
+  },
 ]
 
+const TOPICS = UNITS.flatMap((u) => u.topics)
+
 export default function TheoryPage({ onNavigate }) {
-  const [topic, setTopic] = useState('regular')
-  const current = TOPICS.find((t) => t.id === topic)
+  const [topic, setTopic] = useState('w1')
+  const index = TOPICS.findIndex((t) => t.id === topic)
+  const current = TOPICS[index]
+  const go = (i) => {
+    setTopic(TOPICS[i].id)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
+    <div className="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
+      <aside className="space-y-3 lg:sticky lg:top-20 lg:self-start">
         <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
           <BookOpen className="h-5 w-5 text-indigo-500" /> Konu Anlatımı
         </h2>
-        <nav className="flex flex-wrap gap-1 rounded-xl bg-white p-1 shadow-sm ring-1 ring-slate-200" aria-label="Konular">
-          {TOPICS.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setTopic(t.id)}
-              aria-current={topic === t.id ? 'page' : undefined}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-                topic === t.id ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              <t.icon className="h-4 w-4" aria-hidden />
-              {t.label}
-            </button>
+        <p className="text-xs text-slate-500">Ders kitabının hafta sırasıyla; terimlerin İngilizce karşılıkları parantez içinde.</p>
+        <nav className="space-y-3 rounded-xl bg-white p-2 shadow-sm ring-1 ring-slate-200" aria-label="Konular">
+          {UNITS.map((unit) => (
+            <div key={unit.title}>
+              <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{unit.title}</p>
+              {unit.topics.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setTopic(t.id)}
+                  aria-current={topic === t.id ? 'page' : undefined}
+                  className={`flex w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition-colors ${
+                    topic === t.id ? 'bg-indigo-50 font-medium text-indigo-700' : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  <span className="mt-0.5 min-w-9 shrink-0 rounded bg-slate-100 px-1 text-center text-[10px] font-semibold text-slate-500">H{t.week}</span>
+                  <span>{t.label}</span>
+                </button>
+              ))}
+            </div>
           ))}
         </nav>
+      </aside>
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <span className="rounded-md bg-indigo-600 px-2 py-0.5 text-xs font-semibold text-white">Hafta {current.week}</span>
+          <h3 className="text-lg font-semibold text-slate-900">{current.label}</h3>
+        </div>
+        <current.Component go={onNavigate} />
+        <div className="flex justify-between gap-2 pt-2">
+          <Button icon={ChevronLeft} onClick={() => go(index - 1)} disabled={index === 0}>
+            {index > 0 ? TOPICS[index - 1].label : 'Önceki'}
+          </Button>
+          <Button onClick={() => go(index + 1)} disabled={index === TOPICS.length - 1}>
+            {index < TOPICS.length - 1 ? TOPICS[index + 1].label : 'Sonraki'} <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
-      <current.Component go={onNavigate} />
     </div>
   )
 }
