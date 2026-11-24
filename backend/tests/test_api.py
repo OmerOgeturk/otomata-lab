@@ -358,7 +358,7 @@ ALGEBRA_LANGS = {
     "A": {"kind": "contains", "value": "00"},
     "B": {"kind": "not_contains", "value": "11"},
     "C": {"kind": "not_contains", "value": "000"},
-    "R": {"kind": "regex", "value": "(0+1)*01"},
+    "R": {"kind": "regex", "value": "(0∪1)*01"},
 }
 ALGEBRA_MEMBER = {
     "A": lambda w: "00" in w,
@@ -448,3 +448,39 @@ def test_language_algebra_multi_condition_descriptions_and_errors():
         assert r.status_code == 422, bad
     r = client.post("/api/fa/algebra", json={"alphabet": ["0", "1"], "languages": {"A": {"kind": "count_mod", "value": "2,3"}}, "expression": "A"})
     assert r.status_code == 422 and "alfabede" in r.json()["detail"]
+
+
+BOOK_LANGS = {
+    "A": {"kind": "count_exact", "value": "a,2"},
+    "B": {"kind": "count_min", "value": "a,2"},
+    "C": {"kind": "count_max", "value": "a,2"},
+    "D": {"conditions": [{"kind": "length_min", "value": "3"}, {"kind": "length_max", "value": "5"}]},
+    "E": {"kind": "length_exact", "value": "0"},
+    "R": {"kind": "regex", "value": "a⁺b+"},
+}
+
+
+@pytest.mark.parametrize(
+    "expression, member",
+    [
+        ("A", lambda w: w.count("a") == 2),
+        ("B", lambda w: w.count("a") >= 2),
+        ("C", lambda w: w.count("a") <= 2),
+        ("D", lambda w: 3 <= len(w) <= 5),
+        ("E", lambda w: w == ""),
+        ("R", lambda w: re.fullmatch(r"a+b+", w)),
+        ("A+", lambda w: w != "" and split_in(w, lambda x: x.count("a") == 2)),
+    ],
+)
+def test_language_algebra_book_style_conditions(expression, member):
+    r = client.post("/api/fa/algebra", json={"alphabet": ["a", "b"], "languages": BOOK_LANGS, "expression": expression})
+    assert r.status_code == 200, r.text
+    for w in words("ab", 7):
+        assert fa_accepts(r.json()["automaton"], w) == bool(member(w)), (expression, w)
+
+
+def test_language_algebra_book_descriptions():
+    r = client.post("/api/fa/algebra", json={"alphabet": ["a", "b"], "languages": BOOK_LANGS, "expression": "A"})
+    names = [l["description"] for l in r.json()["languages"]]
+    assert names[0] == "tam 2 tane a içeren dizeler"
+    assert names[3] == "uzunluğu en az 3 olan ve uzunluğu en çok 5 olan dizeler"

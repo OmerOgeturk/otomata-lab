@@ -164,7 +164,8 @@ class AIImageResponse(BaseModel):
 
 
 LanguageKind = Literal[
-    "contains", "not_contains", "starts", "not_starts", "ends", "not_ends", "length_mod", "count_mod", "regex", "automaton"
+    "contains", "not_contains", "starts", "not_starts", "ends", "not_ends", "length_mod", "count_mod", "length_exact", "length_min", "length_max",
+    "count_exact", "count_min", "count_max", "regex", "automaton"
 ]
 
 

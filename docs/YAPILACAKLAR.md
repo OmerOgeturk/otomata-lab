@@ -1,6 +1,6 @@
 # Yapılacaklar ve Devam Notları
 
-Son güncelleme: 2026-11-24 — son commit: Dil İşlemleri'nde çok koşullu diller.
+Son güncelleme: 2026-11-24 — son commit: kaynak kitaba göre koşul türleri ve + notasyonu.
 
 ## Durum özeti
 | Faz | Kapsam | Durum |
@@ -80,6 +80,13 @@ Tarayıcı testi: geçici bir klasöre `playwright-core` kurup `chromium.launch(
 - [x] 90 pytest (dil işlemleri 8 karaktere kadar tüm dizelerde kaba kuvvetle doğrulanıyor), Edge'de uçtan uca test.
 - [x] Çok koşullu diller: `{conditions: [{kind, value}], combine: and|or}` (eski tek `kind/value` biçimi de geçerli); yeni türler `length_mod` (`k` ya da `k,r`) ve `count_mod` (`sembol,k[,r]`). Açıklamalar `≡ r (mod k)` gösterimiyle (Türkçe sayı eki sorunu olmasın diye).
 - Not: kullanıcının örneği (A∪B)*C = Σ* çıkar (B tek sembollü dizeleri içerdiği için (A∪B)* = Σ*); arayüz bunu adım adım gösterir.
+
+## Kaynak kitap (2026-11-24)
+- Kullanıcının ders kitabı: `kaynaklar/` (gitignore'da, telifli — asla push etme). Emre Sermutlu, *Automata, Formal Languages, and Turing Machines* (İngilizce, Sipser tarzı, 14 hafta: DFA, NFA, düzenli diller, regex, pompalama, CFG, CNF, PDA, CFL dışı diller, TM I-II, karar verilemezlik, P/NP, NP-tam).
+- Ucuz inceleme: `pdftotext -layout` ile scratchpad'e metin çıkar, `grep` ile hedefli tara (matematik sembolleri metinde kayboluyor).
+- Notasyon: birleşim ∪, boş dize ε, `+` = en az bir kez (a⁺); CNF tanımı bizimkiyle aynı (yeni başlangıç, yalnızca S → ε). Uygulama buna uyduruldu: `+` artık birleşim değil.
+- [x] Kitap alıştırmalarına göre eklenen koşullar: tam/en az/en çok k tane sembol (`count_exact|min|max`, değer `a,2`), uzunluk tam/en az/en çok (`length_exact|min|max`). `_minimal` kısmi DFA'yı önce tamamlar (`from_nfa` kısmi üretebiliyor).
+- [ ] İsteğe bağlı fikirler: Konu Anlatımı'na kitabın bölüm sırası/terimleri; düzenli gramer (7.3) ↔ NFA dönüşümü; CFG basitleştirme (7.1) adımları zaten CNF'de var; pompalama lemması alıştırma kartları.
 
 ## Son rötuşlar (isteğe bağlı, Faz 4 sonrası)
 - [ ] Toplu test (birden çok dizeyi aynı anda kabul/red listesi).

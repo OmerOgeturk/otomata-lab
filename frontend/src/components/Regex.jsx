@@ -12,7 +12,7 @@ export default function Regex({ value, className = '' }) {
     text = ''
   }
   for (const ch of value) {
-    if (ch === '*' || ch === '⁺') {
+    if (ch === '*' || ch === '⁺' || ch === '+') {
       flush()
       parts.push(
         <sup key={parts.length} className="ml-px text-[0.75em] font-semibold">

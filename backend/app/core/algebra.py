@@ -11,7 +11,7 @@ from app.schemas import FATransition, FiniteAutomaton
 
 MAX_STATES = 300
 NAME = re.compile(r"[A-TV-Z](?:[0-9₀-₉]+)?")
-UNION = {"∪", "U", "|", "+"}
+UNION = {"∪", "U", "|"}
 INTERSECT = {"∩", "&"}
 DIFF = {"−", "-", "\\"}
 COMPLEMENT_POST = {"ᶜ", "'", "′"}
@@ -25,6 +25,12 @@ KIND_LABELS = {
     "ends": "{v} ile biten",
     "not_ends": "{v} ile bitmeyen",
     "length_mod": "uzunluğu {v} olan",
+    "length_exact": "uzunluğu tam {v} olan",
+    "length_min": "uzunluğu en az {v} olan",
+    "length_max": "uzunluğu en çok {v} olan",
+    "count_exact": "{v} içeren",
+    "count_min": "{v} içeren",
+    "count_max": "{v} içeren",
     "count_mod": "{v} olan",
     "regex": "{v} düzenli ifadesine uyan",
     "automaton": "tuvaldeki otomatın kabul ettiği",
@@ -32,6 +38,8 @@ KIND_LABELS = {
 
 
 def _minimal(dfa: DFA) -> DFA:
+    if any(len(dfa.transitions.get(q, {})) < len(dfa.input_symbols) for q in dfa.states):
+        dfa = dfa.to_complete("__tuzak__")
     result = dfa.minify(retain_names=False)
     require(len(result.states) <= MAX_STATES, f"Ara sonuç {MAX_STATES} durumu aşıyor; ifadeyi sadeleştirin.")
     return result
@@ -42,10 +50,10 @@ def _from_nfa(nfa: NFA) -> DFA:
 
 
 def _regex_dfa(regex: str, alphabet: set[str]) -> DFA:
-    text = regex.replace(" ", "").replace("∪", "|").replace("+", "|").replace("ε", "()")
+    text = regex.replace(" ", "").replace("∪", "|").replace("⁺", "+").replace("ε", "()")
     require(text, "Düzenli ifade boş olamaz.")
     for ch in text:
-        require(ch in alphabet or ch in "|*()?", f"Düzenli ifadede '{ch}' sembolü alfabede yok.")
+        require(ch in alphabet or ch in "|*+()?", f"Düzenli ifadede '{ch}' sembolü alfabede yok.")
     try:
         return _from_nfa(NFA.from_regex(text, input_symbols=alphabet))
     except (AutomatonException, IndexError, KeyError) as exc:
@@ -78,6 +86,29 @@ def _counter_dfa(alphabet: set[str], k: int, r: int, counted: set[str]) -> DFA:
     return _minimal(DFA(states=states, input_symbols=alphabet, transitions=transitions, initial_state="0", final_states={str(r)}))
 
 
+def _cap_dfa(alphabet: set[str], counted: set[str], k: int, mode: str) -> DFA:
+    states = {str(i) for i in range(k + 2)}
+    transitions = {
+        str(i): {a: str(min(i + 1, k + 1)) if a in counted else str(i) for a in alphabet} for i in range(k + 2)
+    }
+    finals = {"exact": {str(k)}, "min": {str(k), str(k + 1)}, "max": {str(i) for i in range(k + 1)}}[mode]
+    return _minimal(DFA(states=states, input_symbols=alphabet, transitions=transitions, initial_state="0", final_states=finals))
+
+
+def _bound(text: str) -> int:
+    require(text.strip().isdigit(), f"Sayı bekleniyordu: '{text.strip()}'.")
+    k = int(text)
+    require(k <= 100, "Sayı 100'den büyük olamaz.")
+    return k
+
+
+def _count_parts(value: str, alphabet: set[str]) -> tuple[str, int]:
+    symbol, _, rest = value.partition(",")
+    symbol = symbol.strip()
+    require(symbol in alphabet, f"Sayılacak sembol alfabede olmalı: '{symbol}'. Biçim: sembol,k (örn. a,2).")
+    return symbol, _bound(rest)
+
+
 def _modulo_text(kind: str, value: str) -> str:
     if kind == "length_mod":
         k, r = _modulo(value)
@@ -92,6 +123,10 @@ def _condition_text(condition: dict) -> str:
     value = (condition.get("value") or "").strip()
     if kind in ("length_mod", "count_mod"):
         value = _modulo_text(kind, value)
+    if kind.startswith("count_") and kind != "count_mod":
+        symbol, _, k = value.partition(",")
+        word = {"count_exact": "tam", "count_min": "en az", "count_max": "en çok"}[kind]
+        value = f"{word} {k.strip()} tane {symbol.strip()}"
     return KIND_LABELS[kind].format(v=value)
 
 
@@ -119,6 +154,11 @@ def condition_dfa(definition: dict, alphabet: set[str]) -> DFA:
     require(kind in KIND_LABELS, f"Bilinmeyen dil türü: {kind}.")
     if kind == "length_mod":
         return _counter_dfa(alphabet, *_modulo(value), counted=alphabet)
+    if kind.startswith("length_") and kind != "length_mod":
+        return _cap_dfa(alphabet, alphabet, _bound(value), kind.split("_")[1])
+    if kind.startswith("count_") and kind != "count_mod":
+        symbol, k = _count_parts(value, alphabet)
+        return _cap_dfa(alphabet, {symbol}, k, kind.split("_")[1])
     if kind == "count_mod":
         symbol, _, rest = value.partition(",")
         symbol = symbol.strip()
@@ -153,7 +193,7 @@ def _tokenize(expression: str) -> list[str]:
             i += 2
             continue
         require(
-            ch in UNION | INTERSECT | DIFF | COMPLEMENT_POST | COMPLEMENT_PRE | CONCAT | {"(", ")", "*", "⁺", "∅", "ε"},
+            ch in UNION | INTERSECT | DIFF | COMPLEMENT_POST | COMPLEMENT_PRE | CONCAT | {"(", ")", "*", "⁺", "+", "∅", "ε"},
             f"İfadede tanınmayan karakter: '{ch}'.",
         )
         tokens.append(ch)
@@ -225,11 +265,11 @@ class _Parser:
             text, dfa = self.postfix()
             return self.record(f"¬{text}", _minimal(dfa.complement()), "Tümleme")
         text, dfa = self.atom()
-        while self.peek() in {"*", "⁺"} | COMPLEMENT_POST:
+        while self.peek() in {"*", "⁺", "+"} | COMPLEMENT_POST:
             op = self.take()
             if op == "*":
                 text, dfa = self.record(f"{text}*", _from_nfa(NFA.from_dfa(dfa).kleene_star()), "Kleene yıldızı")
-            elif op == "⁺":
+            elif op in ("⁺", "+"):
                 nfa = NFA.from_dfa(dfa)
                 text, dfa = self.record(f"{text}⁺", _from_nfa(nfa.concatenate(nfa.kleene_star())), "Pozitif kapanış")
             else:

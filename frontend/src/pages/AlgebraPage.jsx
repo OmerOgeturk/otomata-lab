@@ -15,6 +15,12 @@ const KINDS = [
   { value: 'not_starts', label: 'ile başlamaz', placeholder: '1' },
   { value: 'ends', label: 'ile biter', placeholder: '01' },
   { value: 'not_ends', label: 'ile bitmez', placeholder: '01' },
+  { value: 'count_exact', label: 'tam k tane sembol', placeholder: 'a,2' },
+  { value: 'count_min', label: 'en az k tane sembol', placeholder: 'a,2' },
+  { value: 'count_max', label: 'en çok k tane sembol', placeholder: 'a,2' },
+  { value: 'length_exact', label: 'uzunluk tam k', placeholder: '3' },
+  { value: 'length_min', label: 'uzunluk en az k', placeholder: '3' },
+  { value: 'length_max', label: 'uzunluk en çok k', placeholder: '3' },
   { value: 'length_mod', label: 'uzunluk ≡ r (mod k)', placeholder: 'k,r → 2,0' },
   { value: 'count_mod', label: 'sembol sayısı ≡ r (mod k)', placeholder: 'sembol,k,r → 1,3' },
   { value: 'regex', label: 'düzenli ifade', placeholder: '(0∪1)*01' },
@@ -22,11 +28,11 @@ const KINDS = [
 ]
 
 const OPERATORS = [
-  { text: '∪', title: 'Birleşim (U, |, + da yazılabilir)' },
+  { text: '∪', title: 'Birleşim (U veya | da yazılabilir)' },
   { text: '∩', title: 'Kesişim (& da yazılabilir)' },
   { text: '−', title: 'Fark' },
   { text: '*', title: 'Kleene yıldızı' },
-  { text: '⁺', title: 'Pozitif kapanış' },
+  { text: '⁺', title: 'Pozitif kapanış, en az bir kez (+ da yazılabilir)' },
   { text: 'ᶜ', title: "Tümleme (' da yazılabilir)" },
   { text: '(', title: 'Aç parantez' },
   { text: ')', title: 'Kapa parantez' },
@@ -253,7 +259,7 @@ export default function AlgebraPage({ state, setState, faDoc, onImport }) {
               <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               <span>
                 Yan yana yazmak art arda eklemedir (<code className="font-mono">AB</code>). Öncelik: yıldız/tümleme → art arda ekleme → kesişim → birleşim/fark.
-                Düzenli ifadede <code className="font-mono">+</code> ve <code className="font-mono">∪</code> birleşim demektir. Bir dile <em>koşul ekle</em> ile birden çok koşul verip <em>ve</em>/<em>veya</em> ile bağlayabilirsiniz. Her adım sunucuda kesin olarak hesaplanır, yapay zeka kullanılmaz.
+                Kitaptaki gibi <code className="font-mono">∪</code> birleşim, <code className="font-mono">+</code> ise "en az bir kez" demektir (a⁺ = aa*). Bir dile <em>koşul ekle</em> ile birden çok koşul verip <em>ve</em>/<em>veya</em> ile bağlayabilirsiniz. Her adım sunucuda kesin olarak hesaplanır, yapay zeka kullanılmaz.
               </span>
             </div>
           </div>
