@@ -18,14 +18,16 @@ COMPLEMENT_POST = {"ᶜ", "'", "′"}
 COMPLEMENT_PRE = {"¬", "~"}
 CONCAT = {"·", "."}
 KIND_LABELS = {
-    "contains": "{v} alt dizesini içeren dizeler",
-    "not_contains": "{v} alt dizesini içermeyen dizeler",
-    "starts": "{v} ile başlayan dizeler",
-    "not_starts": "{v} ile başlamayan dizeler",
-    "ends": "{v} ile biten dizeler",
-    "not_ends": "{v} ile bitmeyen dizeler",
-    "regex": "{v} düzenli ifadesinin dili",
-    "automaton": "verilen otomatın dili",
+    "contains": "{v} alt dizesini içeren",
+    "not_contains": "{v} alt dizesini içermeyen",
+    "starts": "{v} ile başlayan",
+    "not_starts": "{v} ile başlamayan",
+    "ends": "{v} ile biten",
+    "not_ends": "{v} ile bitmeyen",
+    "length_mod": "uzunluğu {v} olan",
+    "count_mod": "{v} olan",
+    "regex": "{v} düzenli ifadesine uyan",
+    "automaton": "tuvaldeki otomatın kabul ettiği",
 }
 
 
@@ -60,10 +62,68 @@ def _pattern_dfa(kind: str, value: str, alphabet: set[str]) -> DFA:
     return _minimal(builder(alphabet, value, contains=positive))
 
 
+def _modulo(text: str) -> tuple[int, int]:
+    parts = [p.strip() for p in text.replace(";", ",").split(",") if p.strip()]
+    require(1 <= len(parts) <= 2 and all(p.isdigit() for p in parts), f"Mod değeri 'k' ya da 'k,r' biçiminde olmalı: '{text}'.")
+    k = int(parts[0])
+    r = int(parts[1]) if len(parts) == 2 else 0
+    require(1 <= k <= 50, "k 1 ile 50 arasında olmalı.")
+    require(r < k, f"Kalan r, k'dan küçük olmalı (r={r}, k={k}).")
+    return k, r
+
+
+def _counter_dfa(alphabet: set[str], k: int, r: int, counted: set[str]) -> DFA:
+    states = {str(i) for i in range(k)}
+    transitions = {str(i): {a: str((i + 1) % k) if a in counted else str(i) for a in alphabet} for i in range(k)}
+    return _minimal(DFA(states=states, input_symbols=alphabet, transitions=transitions, initial_state="0", final_states={str(r)}))
+
+
+def _modulo_text(kind: str, value: str) -> str:
+    if kind == "length_mod":
+        k, r = _modulo(value)
+        return f"≡ {r} (mod {k})"
+    symbol, _, rest = value.partition(",")
+    k, r = _modulo(rest)
+    return f"{symbol.strip()} sayısı ≡ {r} (mod {k})"
+
+
+def _condition_text(condition: dict) -> str:
+    kind = condition["kind"]
+    value = (condition.get("value") or "").strip()
+    if kind in ("length_mod", "count_mod"):
+        value = _modulo_text(kind, value)
+    return KIND_LABELS[kind].format(v=value)
+
+
+def describe_definition(definition: dict) -> str:
+    conditions = definition.get("conditions") or [definition]
+    joiner = " ve " if definition.get("combine", "and") == "and" else " veya "
+    return joiner.join(_condition_text(c) for c in conditions) + " dizeler"
+
+
 def language_dfa(definition: dict, alphabet: set[str]) -> DFA:
+    conditions = definition.get("conditions") or []
+    if conditions:
+        dfas = [condition_dfa(c, alphabet) for c in conditions]
+        result = dfas[0]
+        for other in dfas[1:]:
+            result = _minimal(result.intersection(other) if definition.get("combine", "and") == "and" else result.union(other))
+        return result
+    require(definition.get("kind"), "Dilin en az bir koşulu olmalı.")
+    return condition_dfa(definition, alphabet)
+
+
+def condition_dfa(definition: dict, alphabet: set[str]) -> DFA:
     kind = definition.get("kind", "")
     value = (definition.get("value") or "").strip()
     require(kind in KIND_LABELS, f"Bilinmeyen dil türü: {kind}.")
+    if kind == "length_mod":
+        return _counter_dfa(alphabet, *_modulo(value), counted=alphabet)
+    if kind == "count_mod":
+        symbol, _, rest = value.partition(",")
+        symbol = symbol.strip()
+        require(symbol in alphabet, f"Sayılacak sembol alfabede olmalı: '{symbol}'. Biçim: sembol,k (örn. 1,3).")
+        return _counter_dfa(alphabet, *_modulo(rest), counted={symbol})
     if kind == "regex":
         return _regex_dfa(value, alphabet)
     if kind == "automaton":
@@ -237,8 +297,7 @@ def evaluate(alphabet: list[str], languages: dict[str, dict], expression: str) -
             atoms[name] = language_dfa(definition, symbols)
         except AutomatonError as exc:
             raise AutomatonError(f"{name} dili: {exc}") from exc
-        value = (definition.get("value") or "").strip()
-        defined.append({"name": name, "description": KIND_LABELS[definition["kind"]].format(v=value), **describe(atoms[name], symbols)})
+        defined.append({"name": name, "description": describe_definition(definition), **describe(atoms[name], symbols)})
     steps: list[dict] = []
     _, result = _Parser(_tokenize(expression), atoms, symbols, steps).parse()
     automaton = to_automaton(result)

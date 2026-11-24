@@ -53,9 +53,9 @@ export default function App() {
   const [algebraState, setAlgebraState] = useState({
     alphabet: '0, 1',
     languages: [
-      { name: 'A', kind: 'contains', value: '00' },
-      { name: 'B', kind: 'not_contains', value: '11' },
-      { name: 'C', kind: 'not_contains', value: '000' },
+      { name: 'A', combine: 'and', conditions: [{ kind: 'contains', value: '00' }, { kind: 'not_contains', value: '11' }] },
+      { name: 'B', combine: 'and', conditions: [{ kind: 'not_contains', value: '11' }] },
+      { name: 'C', combine: 'and', conditions: [{ kind: 'not_contains', value: '000' }] },
     ],
     expression: '(A∪B)*C',
     result: null,

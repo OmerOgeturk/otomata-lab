@@ -415,3 +415,36 @@ def test_language_algebra_errors():
     bad = {"A": {"kind": "contains", "value": "2"}}
     r = client.post("/api/fa/algebra", json={"alphabet": ["0", "1"], "languages": bad, "expression": "A"})
     assert r.status_code == 422 and r.json()["detail"].startswith("A dili")
+
+
+MULTI_LANGS = {
+    "A": {"conditions": [{"kind": "contains", "value": "00"}, {"kind": "not_contains", "value": "11"}], "combine": "and"},
+    "B": {"conditions": [{"kind": "length_mod", "value": "2"}, {"kind": "count_mod", "value": "1,3"}], "combine": "or"},
+    "C": {"conditions": [{"kind": "length_mod", "value": "3,1"}, {"kind": "ends", "value": "1"}, {"kind": "not_starts", "value": "0"}]},
+}
+
+
+@pytest.mark.parametrize(
+    "expression, member",
+    [
+        ("A", lambda w: "00" in w and "11" not in w),
+        ("B", lambda w: len(w) % 2 == 0 or w.count("1") % 3 == 0),
+        ("C", lambda w: len(w) % 3 == 1 and w.endswith("1") and not w.startswith("0")),
+        ("A ∪ C", lambda w: ("00" in w and "11" not in w) or (len(w) % 3 == 1 and w.endswith("1") and not w.startswith("0"))),
+    ],
+)
+def test_language_algebra_multi_condition(expression, member):
+    result = algebra(expression, MULTI_LANGS)
+    for w in words("01", 9):
+        assert fa_accepts(result["automaton"], w) == bool(member(w)), (expression, w)
+
+
+def test_language_algebra_multi_condition_descriptions_and_errors():
+    langs = algebra("A", MULTI_LANGS)["languages"]
+    assert langs[0]["description"] == "00 alt dizesini içeren ve 11 alt dizesini içermeyen dizeler"
+    assert langs[1]["description"] == "uzunluğu ≡ 0 (mod 2) olan veya 1 sayısı ≡ 0 (mod 3) olan dizeler"
+    for bad in ["3,3", "x", "0"]:
+        r = client.post("/api/fa/algebra", json={"alphabet": ["0", "1"], "languages": {"A": {"kind": "length_mod", "value": bad}}, "expression": "A"})
+        assert r.status_code == 422, bad
+    r = client.post("/api/fa/algebra", json={"alphabet": ["0", "1"], "languages": {"A": {"kind": "count_mod", "value": "2,3"}}, "expression": "A"})
+    assert r.status_code == 422 and "alfabede" in r.json()["detail"]

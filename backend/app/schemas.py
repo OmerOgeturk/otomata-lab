@@ -163,10 +163,23 @@ class AIImageResponse(BaseModel):
     answer: Optional[str] = None
 
 
-class LanguageDefinition(BaseModel):
-    kind: Literal["contains", "not_contains", "starts", "not_starts", "ends", "not_ends", "regex", "automaton"]
+LanguageKind = Literal[
+    "contains", "not_contains", "starts", "not_starts", "ends", "not_ends", "length_mod", "count_mod", "regex", "automaton"
+]
+
+
+class LanguageCondition(BaseModel):
+    kind: LanguageKind
     value: str = Field(default="", max_length=200)
     automaton: Optional[dict] = None
+
+
+class LanguageDefinition(BaseModel):
+    kind: Optional[LanguageKind] = None
+    value: str = Field(default="", max_length=200)
+    automaton: Optional[dict] = None
+    conditions: list[LanguageCondition] = Field(default_factory=list, max_length=8)
+    combine: Literal["and", "or"] = "and"
 
 
 class AlgebraRequest(BaseModel):

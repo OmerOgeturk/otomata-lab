@@ -1,6 +1,6 @@
 # Yapılacaklar ve Devam Notları
 
-Son güncelleme: 2026-11-24 — son commit: Dil İşlemleri sekmesi + üst simgeli düzenli ifade gösterimi.
+Son güncelleme: 2026-11-24 — son commit: Dil İşlemleri'nde çok koşullu diller.
 
 ## Durum özeti
 | Faz | Kapsam | Durum |
@@ -78,6 +78,7 @@ Tarayıcı testi: geçici bir klasöre `playwright-core` kurup `chromium.launch(
 - [x] `core/algebra.py` + `POST /api/fa/algebra` `{alphabet, languages: {A: {kind, value | automaton}}, expression}`: türler contains/not_contains/starts/not_starts/ends/not_ends/regex/automaton; ifade ayrıştırıcı (∪ U | +, ∩ &, − - \, yan yana/·, *, ⁺, ᶜ ' ¬, Σ*, ε, ∅). `U` birleşim işareti olduğu için dil adı olamaz. Her ara sonuç automata-lib ile minimize edilir, durumlar q0.. BFS sırasıyla adlandırılır; `steps`, `universal`, `empty` döner.
 - [x] `pages/AlgebraPage.jsx` (Dil İşlemleri sekmesi), `components/Regex.jsx`: `*` üst simge, `|` → ∪ (Dönüşümler, açıklama, fotoğraf analizi, dil işlemleri). Gemini açıklamalarında regex için LaTeX istenir.
 - [x] 90 pytest (dil işlemleri 8 karaktere kadar tüm dizelerde kaba kuvvetle doğrulanıyor), Edge'de uçtan uca test.
+- [x] Çok koşullu diller: `{conditions: [{kind, value}], combine: and|or}` (eski tek `kind/value` biçimi de geçerli); yeni türler `length_mod` (`k` ya da `k,r`) ve `count_mod` (`sembol,k[,r]`). Açıklamalar `≡ r (mod k)` gösterimiyle (Türkçe sayı eki sorunu olmasın diye).
 - Not: kullanıcının örneği (A∪B)*C = Σ* çıkar (B tek sembollü dizeleri içerdiği için (A∪B)* = Σ*); arayüz bunu adım adım gösterir.
 
 ## Son rötuşlar (isteğe bağlı, Faz 4 sonrası)

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { ArrowRight, Blend, Info, Plus, Sigma, Trash2, Wand2 } from 'lucide-react'
+import { ArrowRight, Blend, Info, Plus, Sigma, Trash2, Wand2, X } from 'lucide-react'
 import MiniCanvas from '../components/MiniCanvas'
 import RegexText from '../components/Regex'
 import TransitionTable from '../components/TransitionTable'
@@ -15,6 +15,8 @@ const KINDS = [
   { value: 'not_starts', label: 'ile başlamaz', placeholder: '1' },
   { value: 'ends', label: 'ile biter', placeholder: '01' },
   { value: 'not_ends', label: 'ile bitmez', placeholder: '01' },
+  { value: 'length_mod', label: 'uzunluk ≡ r (mod k)', placeholder: 'k,r → 2,0' },
+  { value: 'count_mod', label: 'sembol sayısı ≡ r (mod k)', placeholder: 'sembol,k,r → 1,3' },
   { value: 'regex', label: 'düzenli ifade', placeholder: '(0∪1)*01' },
   { value: 'automaton', label: 'tuvaldeki otomat', placeholder: '' },
 ]
@@ -33,33 +35,31 @@ const OPERATORS = [
   { text: '∅', title: 'Boş dil' },
 ]
 
-const PRESETS = ['(A∪B)*C', 'A∩B', '(A∩B)C', 'Aᶜ ∪ C', 'A − B', '(A∩B)*']
+const PRESETS = ['(A∪B)*C', 'A∪B', 'AC', 'Aᶜ ∩ C', 'A − C', 'A*']
 const NAMES = 'ABCDEFGHKLMNPRST'
 
 function ExpressionText({ text }) {
   return <RegexText value={text.replace(/[∪U+]/g, '|').replace(/&/g, '∩')} className="not-italic" />
 }
 
-function LanguageRow({ lang, onChange, onRemove, hasCanvas }) {
-  const kind = KINDS.find((k) => k.value === lang.kind)
+function ConditionLine({ lang, condition, index, onChange, onRemove, hasCanvas }) {
+  const kind = KINDS.find((k) => k.value === condition.kind)
   return (
     <div className="flex items-center gap-2">
-      <span className="w-6 text-center font-serif text-lg font-semibold italic text-indigo-700">{lang.name}</span>
-      <span className="text-slate-400">=</span>
-      {lang.kind !== 'automaton' && (
+      {condition.kind !== 'automaton' && (
         <input
           className={`${inputClass} w-28 font-mono`}
-          value={lang.value}
+          value={condition.value}
           placeholder={kind.placeholder}
           onChange={(e) => onChange({ value: e.target.value })}
-          aria-label={`${lang.name} dilinin değeri`}
+          aria-label={`${lang.name} dili ${index + 1}. koşul değeri`}
         />
       )}
       <select
-        className={`${inputClass} flex-1`}
-        value={lang.kind}
+        className={`${inputClass} min-w-0 flex-1`}
+        value={condition.kind}
         onChange={(e) => onChange({ kind: e.target.value })}
-        aria-label={`${lang.name} dilinin türü`}
+        aria-label={`${lang.name} dili ${index + 1}. koşul türü`}
       >
         {KINDS.map((k) => (
           <option key={k.value} value={k.value} disabled={k.value === 'automaton' && !hasCanvas}>
@@ -67,7 +67,60 @@ function LanguageRow({ lang, onChange, onRemove, hasCanvas }) {
           </option>
         ))}
       </select>
-      <button type="button" onClick={onRemove} className="text-slate-400 hover:text-red-600" aria-label={`${lang.name} dilini sil`} title="Sil">
+      <button
+        type="button"
+        onClick={onRemove}
+        disabled={lang.conditions.length === 1}
+        className="text-slate-400 hover:text-red-600 disabled:invisible"
+        aria-label={`${lang.name} dili ${index + 1}. koşulu sil`}
+        title="Koşulu sil"
+      >
+        <X className="h-4 w-4" />
+      </button>
+    </div>
+  )
+}
+
+function LanguageRow({ lang, onChange, onRemove, hasCanvas }) {
+  const setCondition = (i, patch) => onChange({ conditions: lang.conditions.map((c, j) => (j === i ? { ...c, ...patch } : c)) })
+  return (
+    <div className="flex items-start gap-2 rounded-lg p-2 ring-1 ring-slate-200">
+      <span className="mt-1 w-6 text-center font-serif text-lg font-semibold italic text-indigo-700">{lang.name}</span>
+      <span className="mt-1.5 text-slate-400">=</span>
+      <div className="min-w-0 flex-1 space-y-1.5">
+        {lang.conditions.map((condition, i) => (
+          <div key={i} className="space-y-1.5">
+            {i > 0 && (
+              <select
+                className="rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-700 ring-1 ring-indigo-200"
+                value={lang.combine}
+                onChange={(e) => onChange({ combine: e.target.value })}
+                aria-label={`${lang.name} dili bağlacı`}
+              >
+                <option value="and">ve</option>
+                <option value="or">veya</option>
+              </select>
+            )}
+            <ConditionLine
+              lang={lang}
+              condition={condition}
+              index={i}
+              hasCanvas={hasCanvas}
+              onChange={(patch) => setCondition(i, patch)}
+              onRemove={() => onChange({ conditions: lang.conditions.filter((_, j) => j !== i) })}
+            />
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={() => onChange({ conditions: [...lang.conditions, { kind: 'not_contains', value: '' }] })}
+          disabled={lang.conditions.length >= 8}
+          className="flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-800"
+        >
+          <Plus className="h-3.5 w-3.5" /> koşul ekle
+        </button>
+      </div>
+      <button type="button" onClick={onRemove} className="mt-1.5 text-slate-400 hover:text-red-600" aria-label={`${lang.name} dilini sil`} title="Dili sil">
         <Trash2 className="h-4 w-4" />
       </button>
     </div>
@@ -93,7 +146,7 @@ export default function AlgebraPage({ state, setState, faDoc, onImport }) {
   const addLang = () => {
     const used = new Set(languages.map((l) => l.name))
     const name = [...NAMES].find((n) => !used.has(n))
-    if (name) set({ languages: [...languages, { name, kind: 'contains', value: '' }] })
+    if (name) set({ languages: [...languages, { name, combine: 'and', conditions: [{ kind: 'contains', value: '' }] }] })
   }
 
   const insert = (text) => {
@@ -113,7 +166,13 @@ export default function AlgebraPage({ state, setState, faDoc, onImport }) {
     try {
       const symbols = alphabet.split(/[\s,;{}]+/).filter(Boolean)
       const payload = Object.fromEntries(
-        languages.map((l) => [l.name, l.kind === 'automaton' ? { kind: l.kind, automaton: canvasFa } : { kind: l.kind, value: l.value }])
+        languages.map((l) => [
+          l.name,
+          {
+            combine: l.combine,
+            conditions: l.conditions.map((c) => (c.kind === 'automaton' ? { kind: c.kind, automaton: canvasFa } : { kind: c.kind, value: c.value })),
+          },
+        ])
       )
       const data = await api.fa.algebra(symbols, payload, expression)
       const automaton = normalizeFA(data.automaton)
@@ -194,7 +253,7 @@ export default function AlgebraPage({ state, setState, faDoc, onImport }) {
               <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               <span>
                 Yan yana yazmak art arda eklemedir (<code className="font-mono">AB</code>). Öncelik: yıldız/tümleme → art arda ekleme → kesişim → birleşim/fark.
-                Düzenli ifadede <code className="font-mono">+</code> ve <code className="font-mono">∪</code> birleşim demektir. Her adım sunucuda kesin olarak hesaplanır, yapay zeka kullanılmaz.
+                Düzenli ifadede <code className="font-mono">+</code> ve <code className="font-mono">∪</code> birleşim demektir. Bir dile <em>koşul ekle</em> ile birden çok koşul verip <em>ve</em>/<em>veya</em> ile bağlayabilirsiniz. Her adım sunucuda kesin olarak hesaplanır, yapay zeka kullanılmaz.
               </span>
             </div>
           </div>
@@ -231,11 +290,10 @@ export default function AlgebraPage({ state, setState, faDoc, onImport }) {
                   <p className="mb-1 text-xs font-medium text-slate-500">Tanımlı diller</p>
                   <ul className="space-y-1 text-sm">
                     {result.languages.map((l) => (
-                      <li key={l.name} className="flex flex-wrap items-center gap-1.5">
-                        <span className="font-serif font-semibold italic text-indigo-700">{l.name}</span>
-                        <span className="text-slate-600">= {l.description}</span>
-                        <span className="text-xs text-slate-400">({l.states} durum)</span>
-                        <SetBadges item={l} />
+                      <li key={l.name} className="leading-6">
+                        <span className="font-serif font-semibold italic text-indigo-700">{l.name}</span>{' '}
+                        <span className="text-slate-600">= {l.description}</span>{' '}
+                        <span className="whitespace-nowrap text-xs text-slate-400">({l.states} durum)</span> <SetBadges item={l} />
                       </li>
                     ))}
                   </ul>
