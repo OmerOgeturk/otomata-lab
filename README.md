@@ -4,7 +4,7 @@
 
 - **Frontend:** React (Vite), Tailwind CSS, Cytoscape.js, Lucide-React
 - **Backend:** Python, FastAPI, automata-lib
-- **Yapay Zeka:** Google Gemini API (`gemini-2.5-flash`)
+- **Yapay Zeka:** Google Gemini API (varsayılan `gemini-3.8-flash`, yoğunlukta yedek modellere otomatik geçiş)
 
 Geliştirme durumu ve kalan işler: [docs/YAPILACAKLAR.md](docs/YAPILACAKLAR.md)
 
@@ -27,6 +27,8 @@ Anahtarı https://aistudio.google.com/apikey adresinden alın ve `backend/.env` 
 GEMINI_API_KEY=anahtarınız
 ```
 `.env` dosyası `.gitignore` içindedir, GitHub'a gönderilmez. Anahtar her yapay zeka isteğinde `.env` dosyasından yeniden okunur; değiştirmek için dosyayı güncellemeniz yeterlidir (yeniden başlatma gerekmez). Anahtar yokken yapay zeka dışındaki tüm özellikler çalışır.
+
+Model `GEMINI_MODEL` ile seçilir; model yoğun (503) veya zaman aşımına düşerse `GEMINI_FALLBACK_MODELS` listesindeki modeller sırayla denenir (varsayılan `gemini-3.7-flash,gemini-3.1-flash-lite`). Not: `gemini-2.5-flash` yeni kullanıcılara kapatıldığı için varsayılan model güncellendi.
 
 ### Frontend
 ```bash

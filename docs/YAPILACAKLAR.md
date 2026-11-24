@@ -1,6 +1,6 @@
 # Yapılacaklar ve Devam Notları
 
-Son güncelleme: 2026-11-24 — son commit: Faz 4 (gerçek Gemini testi hariç).
+Son güncelleme: 2026-11-24 — son commit: Faz 4 + gerçek Gemini testi.
 
 ## Durum özeti
 | Faz | Kapsam | Durum |
@@ -9,13 +9,13 @@ Son güncelleme: 2026-11-24 — son commit: Faz 4 (gerçek Gemini testi hariç).
 | 1 | Backend: FastAPI + automata-lib + Gemini servisi, 61 pytest | ✅ Bitti |
 | 2 | Frontend iskelet, storageService, Cytoscape DFA/NFA tuvali, Dönüşümler | ✅ Bitti (Edge ile uçtan uca test edildi) |
 | 3 | PDA (canlı yığıt) + Turing Makinesi (canlı şerit) | ✅ Bitti (Edge ile uçtan uca test edildi) |
-| 4 | Yapay Zeka arayüzü + Konu Anlatımı | ✅ Bitti — yalnızca gerçek Gemini anahtarıyla deneme kaldı (sahte API yanıtlarıyla Edge'de test edildi) |
+| 4 | Yapay Zeka arayüzü + Konu Anlatımı | ✅ Bitti (gerçek Gemini anahtarıyla Edge'de test edildi) |
 
 ## Çalışma kuralları (kullanıcı kararları)
 - Her faz bitince commit + `git push`, ardından **kullanıcı onayı beklenir**.
 - Gemini API anahtarı **asla** repoya girmez: yalnızca `backend/.env` (gitignore'da). Push öncesi kontrol:
-  `git ls-files | grep -iE "(^|/)\.env"` (yalnızca `.env.example` çıkmalı) ve `git diff --cached | grep -iE "AIza[0-9A-Za-z_-]{20}"` (boş çıkmalı).
-- Anahtar her AI isteğinde `.env`'den yeniden okunur (`load_dotenv(override=True)`), değiştirmek için yeniden başlatma gerekmez. Kullanıcı anahtarı henüz almadı.
+  `git ls-files | grep -iE "(^|/)\.env"` (yalnızca `.env.example` çıkmalı) ve anahtarın kendisini aramak: `k=$(sed -n 's/^GEMINI_API_KEY=//p' backend/.env); [ -n "$k" ] && git diff --cached | grep -qF "$k" && echo SIZINTI || echo temiz`. Yeni Google anahtarları `AIza` yerine `AQ.` ile başlayabilir; desen taraması yetmez.
+- Anahtar her AI isteğinde `.env`'den yeniden okunur (`load_dotenv(override=True)`), değiştirmek için yeniden başlatma gerekmez. Kullanıcının anahtarı `backend/.env` içinde tanımlı (2026-11-24).
 - Commit kimliği repo bazlı: `OmerOgeturk <202535117+OmerOgeturk@users.noreply.github.com>`.
 - Tuzak durumu (∅) içeren tam DFA minimizasyon çıktısı kullanıcı tarafından onaylandı.
 - Kod: temiz, modüler, gereksiz yorum satırı yok; arayüz metinleri Türkçe.
@@ -45,6 +45,7 @@ Tarayıcı testi: geçici bir klasöre `playwright-core` kurup `chromium.launch(
   - Faz 3 parçaları: `lib/pda.js` (`parseRules`, `pdaRule`, `setEdgeRules`), `lib/tm.js` (`tmTable`, `withAbsolutePositions`), `components/StackView.jsx`, `components/TapeView.jsx`, `pages/PDAPage.jsx`, `pages/TMPage.jsx`. `FAInspector` PDA'da da kullanılıyor (`editLabel` prop'u).
 - **Faz 4 parçaları:** `components/Markdown.jsx` (HTML enjekte etmeyen basit Markdown → React; regex içindeki `*` italiğe dönmez), `components/Tex.jsx` (KaTeX), `components/MiniCanvas.jsx` (ConvertPage'den ayrıldı). AI durumu App'te (`aiState`) tutulur, sekme değişince kaybolmaz. Backend `GET /api/ai/status` → `{configured, model}`. API hataları `error.status` taşır (503 = anahtar yok).
 - Gemini'siz uçtan uca test: Playwright `page.route('**/api/ai/*', ...)` ile sahte yanıt (`scratchpad` betiği örneği: generate → sabit DFA, explain → gerçek `/api/fa/to-regex` + sahte Markdown).
+- Gemini yoğunluğu: o an hangi modellerin yanıt verdiğini görmek için `.venv/Scripts/python` ile `client.models.generate_content` küçük bir istek atılabilir; yanıtlar 20–70 sn sürebiliyor. Python test betiklerinde `localhost` yerine `127.0.0.1` kullan (Windows'ta IPv6 denemesi her istekte ~2 sn kaybettirir).
 - **Bilinen tuzaklar:** Cytoscape kapsayıcıya `position: relative` yazar → kapsayıcı `h-full w-full`, dış sarmalayıcı `absolute inset-0` olmalı. automata-lib'de geçici nesne üzerinde metod çağırmak (`DFA.from_nfa(x).isempty()`) "garbage collected" hatası verir → önce değişkene ata. Windows konsolunda `∅` yazdırmak için `PYTHONIOENCODING=utf-8`. automata-lib DTM şeridi sola uzadığında başa boşluk ekler ve `head` 0'da kalır → `withAbsolutePositions` bunu telafi eder. Playwright testinde `getByLabel('Girdi dizesi')` iki öğe bulur (InputTape de aynı etikete sahip) → `input[aria-label=...]` kullan. Yeni npm bağımlılığı eklenince Vite ilk açılışta bağımlılıkları optimize edip sayfayı yeniden yükler; ilk test zaman aşımına uğrayabilir.
 
 ## Faz 3 — PDA ve Turing Makinesi
@@ -63,7 +64,7 @@ Tarayıcı testi: geçici bir klasöre `playwright-core` kurup `chromium.launch(
 - [x] Anahtar yokken (HTTP 503) dostça bilgilendirme kartı: anahtarın nereden alınacağı (https://aistudio.google.com/apikey) ve `backend/.env` içine `GEMINI_API_KEY=` yazılacağı; FA sekmesine "Dilini açıkla" kısayolu.
 - [x] `pages/TheoryPage.jsx` — pasif çalışma kartları: Düzenli Diller (tanım, kapanış özellikleri, DFA/NFA/regex denkliği), Pompalama Lemması (düzenli + bağlamdan bağımsız; ispat adımları, formüller, çözümlü örnekler: aⁿbⁿ, ww, aⁿbⁿcⁿ), Bağlamdan Bağımsız Diller (CFG, PDA denkliği), Chomsky Hiyerarşisi (tablo: tür, dilbilgisi, otomat, örnek). Formüller için KaTeX (`katex` npm paketi) kullan.
 - [x] README güncelle, commit + push.
-- [ ] **Gerçek Gemini anahtarıyla test** (kullanıcı anahtarı `backend/.env`'ye ekledikten sonra): Yapay Zeka sekmesinde örnek istemlerle üret → tuvale aktar → birkaç dizeyle test et; "Dilini açıkla" çıktısının Markdown'ı düzgün görünüyor mu? Gerekirse `gemini.py` içindeki talimatları iyileştir.
+- [x] **Gerçek Gemini anahtarıyla test:** 5 örnek istemin hepsi 8 karaktere kadar tüm dizelerde doğru otomat üretti; açıklama ve arayüz akışı çalışıyor. `gemini-2.5-flash` yeni kullanıcılara kapalı → varsayılan `gemini-3.8-flash`; yoğunluk (503/504) için yedek model zinciri, 30 sn zaman aşımı ve Türkçe hata mesajları eklendi. Markdown'da `$…$` formülleri KaTeX ile gösteriliyor.
 
 ## Son rötuşlar (isteğe bağlı, Faz 4 sonrası)
 - [ ] Toplu test (birden çok dizeyi aynı anda kabul/red listesi).

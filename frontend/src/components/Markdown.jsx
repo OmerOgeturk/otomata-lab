@@ -1,10 +1,12 @@
 import { Fragment } from 'react'
+import Tex from './Tex'
 
-const INLINE = /(`[^`]+`|\*\*[^*]+\*\*|__[^_]+__|(?<=^|[\s(])\*(?!\s)[^*]+?(?<!\s)\*(?=$|[\s.,;:!?)])|(?<=^|[\s(])_(?!\s)[^_]+?(?<!\s)_(?=$|[\s.,;:!?)]))/g
+const INLINE = /(\$(?!\s)[^$\n]+?(?<!\s)\$|`[^`]+`|\*\*[^*]+\*\*|__[^_]+__|(?<=^|[\s(])\*(?!\s)[^*]+?(?<!\s)\*(?=$|[\s.,;:!?)])|(?<=^|[\s(])_(?!\s)[^_]+?(?<!\s)_(?=$|[\s.,;:!?)]))/g
 
 function inline(text) {
   return text.split(INLINE).map((part, i) => {
     if (!part) return null
+    if (part.length > 2 && part.startsWith('$') && part.endsWith('$')) return <Tex key={i}>{part.slice(1, -1)}</Tex>
     if (part.startsWith('`')) {
       return (
         <code key={i} className="rounded bg-slate-100 px-1 py-0.5 font-mono text-[0.9em] text-indigo-700">

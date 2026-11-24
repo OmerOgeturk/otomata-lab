@@ -5,12 +5,12 @@ import { emptyFA, normalizeFA } from './lib/fa'
 import { ensurePositions } from './lib/graph'
 import { emptyPDA, normalizePDA } from './lib/pda'
 import { emptyTM, normalizeTM } from './lib/tm'
-import AIPage from './pages/AIPage'
 import ConvertPage from './pages/ConvertPage'
 import FAPage from './pages/FAPage'
 import PDAPage from './pages/PDAPage'
 import TMPage from './pages/TMPage'
 
+const AIPage = lazy(() => import('./pages/AIPage'))
 const TheoryPage = lazy(() => import('./pages/TheoryPage'))
 
 const TABS = [
@@ -97,14 +97,16 @@ export default function App() {
         {tab === 'pda' && <PDAPage {...pda} />}
         {tab === 'tm' && <TMPage {...tm} />}
         {tab === 'ai' && (
-          <AIPage
-            state={aiState}
-            setState={setAiState}
-            faDoc={fa.doc}
-            onImport={importGenerated}
-            autoExplain={autoExplain}
-            onAutoExplainDone={() => setAutoExplain(false)}
-          />
+          <Suspense fallback={<p className="p-6 text-sm text-slate-400">Yükleniyor…</p>}>
+            <AIPage
+              state={aiState}
+              setState={setAiState}
+              faDoc={fa.doc}
+              onImport={importGenerated}
+              autoExplain={autoExplain}
+              onAutoExplainDone={() => setAutoExplain(false)}
+            />
+          </Suspense>
         )}
         {tab === 'theory' && (
           <Suspense fallback={<p className="p-6 text-sm text-slate-400">Yükleniyor…</p>}>

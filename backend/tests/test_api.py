@@ -1,4 +1,5 @@
 import itertools
+import json
 import re
 
 import pytest
@@ -186,3 +187,50 @@ def test_ai_status_reads_env_file(monkeypatch, tmp_path):
     monkeypatch.setattr(gemini, "ENV_PATH", env)
     monkeypatch.setenv("GEMINI_API_KEY", "")
     assert client.get("/api/ai/status").json()["configured"] is True
+
+
+class _FakeModels:
+    def __init__(self, script):
+        self.script = script
+        self.calls = []
+
+    def generate_content(self, model, contents, config):
+        from google.genai import errors
+
+        self.calls.append(model)
+        outcome = self.script.get(model, 503)
+        if isinstance(outcome, int):
+            raise errors.APIError(outcome, {"error": {"code": outcome, "message": "test", "status": "X"}})
+        return type("R", (), {"text": outcome})()
+
+
+def _fake_client(monkeypatch, script, models):
+    fake = _FakeModels(script)
+    client = type("C", (), {"models": fake})()
+    monkeypatch.setattr(gemini, "_client", lambda: (client, models))
+    monkeypatch.setattr(gemini.time, "sleep", lambda _: None)
+    return fake
+
+
+def test_ai_falls_back_when_model_overloaded(monkeypatch):
+    dfa = template(FA_TEMPLATES, FA_TEMPLATES[0]["id"])
+    fake = _fake_client(monkeypatch, {"yedek": json.dumps(dfa)}, ["ana", "yedek"])
+    r = client.post("/api/ai/generate", json={"prompt": "herhangi bir dil"})
+    assert r.status_code == 200
+    assert fake.calls == ["ana", "yedek"]
+
+
+def test_ai_overloaded_everywhere_gives_turkish_502(monkeypatch):
+    _fake_client(monkeypatch, {}, ["ana", "yedek"])
+    r = client.post("/api/ai/generate", json={"prompt": "herhangi bir dil"})
+    assert r.status_code == 502
+    assert "yoğun" in r.json()["detail"]
+
+
+def test_ai_invalid_key_is_not_retried(monkeypatch):
+    fake = _fake_client(monkeypatch, {"ana": 403}, ["ana", "yedek"])
+    r = client.post("/api/ai/generate", json={"prompt": "herhangi bir dil"})
+    assert r.status_code == 502
+    assert "anahtarı geçersiz" in r.json()["detail"]
+    assert fake.calls == ["ana"]
+
