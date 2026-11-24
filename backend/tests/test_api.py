@@ -5,6 +5,8 @@ import re
 import pytest
 from fastapi.testclient import TestClient
 
+from app.core import cfg as cfg_core
+from app.core.common import is_epsilon
 from app.main import app
 from app.services import gemini
 from app.templates import FA_TEMPLATES, PDA_TEMPLATES, TM_TEMPLATES
@@ -23,6 +25,29 @@ def template(templates, tid):
 
 
 def fa_accepts(automaton, word):
+    # Kaba kuvvet kontrolleri binlerce dize dener; her biri için HTTP isteği
+    # atmak paketi dakikalarca uzatıyordu. Yerel simülasyon kullanılır;
+    # /api/fa/simulate ile uyumu test_local_simulator_matches_api sınar.
+    delta = {}
+    for t in automaton["transitions"]:
+        delta.setdefault((t["from"], "" if is_epsilon(t["symbol"]) else t["symbol"]), set()).add(t["to"])
+
+    def closure(states):
+        stack, seen = list(states), set(states)
+        while stack:
+            for q in delta.get((stack.pop(), ""), ()):
+                if q not in seen:
+                    seen.add(q)
+                    stack.append(q)
+        return seen
+
+    current = closure({automaton["start_state"]})
+    for ch in word:
+        current = closure({q for s in current for q in delta.get((s, ch), ())})
+    return bool(current & set(automaton["accept_states"]))
+
+
+def fa_accepts_api(automaton, word):
     r = client.post("/api/fa/simulate", json={"automaton": automaton, "input": word})
     assert r.status_code == 200, r.text
     return r.json()["accepted"]
@@ -243,9 +268,23 @@ def cnf(grammar):
 
 
 def cyk_accepts(grammar, word):
+    return cfg_core.cyk(grammar, word)["accepted"]
+
+
+def cyk_accepts_api(grammar, word):
     r = client.post("/api/cfg/cyk", json={"grammar": grammar, "input": word})
     assert r.status_code == 200, r.text
     return r.json()["accepted"]
+
+
+def test_local_simulator_matches_api():
+    for t in FA_TEMPLATES:
+        fa = t["automaton"]
+        for w in words(fa["alphabet"], 4):
+            assert fa_accepts(fa, w) == fa_accepts_api(fa, w), (t["id"], w)
+    g = cnf("S -> aSb | ε")["cnf"]
+    for w in words("ab", 5):
+        assert cyk_accepts(g, w) == cyk_accepts_api(g, w), w
 
 
 def is_balanced(word):
