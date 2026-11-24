@@ -1,6 +1,6 @@
 # Yapılacaklar ve Devam Notları
 
-Son güncelleme: 2026-11-24 — son commit: Faz 3.
+Son güncelleme: 2026-11-24 — son commit: Faz 4 (gerçek Gemini testi hariç).
 
 ## Durum özeti
 | Faz | Kapsam | Durum |
@@ -9,7 +9,7 @@ Son güncelleme: 2026-11-24 — son commit: Faz 3.
 | 1 | Backend: FastAPI + automata-lib + Gemini servisi, 61 pytest | ✅ Bitti |
 | 2 | Frontend iskelet, storageService, Cytoscape DFA/NFA tuvali, Dönüşümler | ✅ Bitti (Edge ile uçtan uca test edildi) |
 | 3 | PDA (canlı yığıt) + Turing Makinesi (canlı şerit) | ✅ Bitti (Edge ile uçtan uca test edildi) |
-| 4 | Yapay Zeka arayüzü + Konu Anlatımı | ⏳ Sıradaki |
+| 4 | Yapay Zeka arayüzü + Konu Anlatımı | ✅ Bitti — yalnızca gerçek Gemini anahtarıyla deneme kaldı (sahte API yanıtlarıyla Edge'de test edildi) |
 
 ## Çalışma kuralları (kullanıcı kararları)
 - Her faz bitince commit + `git push`, ardından **kullanıcı onayı beklenir**.
@@ -41,9 +41,11 @@ Tarayıcı testi: geçici bir klasöre `playwright-core` kurup `chromium.launch(
   - `lib/graph.js` — `toCanvas(machine, labelOf, sep)`, `groupEdges`, `renameIn`, `removeStateIn`, `toggleAcceptIn`, `removeEdgeIn`, `autoLayout`, `ensurePositions`, `nextStateName`, `EPS`, `isEps`, `showEps` (tüm modüller `states/start_state/accept_states/transitions[{from,to}]` yapısını paylaşır).
   - `hooks/useStepper.js` (`useStepper(total, resetKey)`), `components/StepControls.jsx`, `hooks/useTemplates.js`, `components/FileMenu.jsx` (`kind` parametresiyle `pda`, `tm` için de çalışır), `components/ui.jsx` (Button, IconButton, Panel, Field, Alert, Dialog, Badge, Placeholder, `inputClass` — genişlik sınıfını ayrıca ver).
   - `services/storageService.js` — `list/save/load/remove/saveDraft/loadDraft/exportJSON/importJSON(file, kind)`; `kind` = `fa` | `pda` | `tm`.
-  - `hooks/useDocument.js` — `useDocument(kind, prepare)` → `{doc, setDoc, loadDoc, fitKey}`; taslağı yükler/otomatik kaydeder. `App.jsx` üç modül için (`fa`, `pda`, `tm`) kullanıyor; AI/Konu sekmeleri hâlâ `Placeholder`. AI'dan tuvale aktarma: `fa.loadDoc({ name, automaton })` + `setTab('fa')`.
+  - `hooks/useDocument.js` — `useDocument(kind, prepare)` → `{doc, setDoc, loadDoc, fitKey}`; taslağı yükler/otomatik kaydeder. `App.jsx` üç modül için (`fa`, `pda`, `tm`) kullanıyor; AI ve Konu sekmeleri de bağlı (`pages/AIPage.jsx`, lazy yüklenen `pages/TheoryPage.jsx`). AI'dan tuvale aktarma: `fa.loadDoc({ name, automaton })` + `setTab('fa')`.
   - Faz 3 parçaları: `lib/pda.js` (`parseRules`, `pdaRule`, `setEdgeRules`), `lib/tm.js` (`tmTable`, `withAbsolutePositions`), `components/StackView.jsx`, `components/TapeView.jsx`, `pages/PDAPage.jsx`, `pages/TMPage.jsx`. `FAInspector` PDA'da da kullanılıyor (`editLabel` prop'u).
-- **Bilinen tuzaklar:** Cytoscape kapsayıcıya `position: relative` yazar → kapsayıcı `h-full w-full`, dış sarmalayıcı `absolute inset-0` olmalı. automata-lib'de geçici nesne üzerinde metod çağırmak (`DFA.from_nfa(x).isempty()`) "garbage collected" hatası verir → önce değişkene ata. Windows konsolunda `∅` yazdırmak için `PYTHONIOENCODING=utf-8`. automata-lib DTM şeridi sola uzadığında başa boşluk ekler ve `head` 0'da kalır → `withAbsolutePositions` bunu telafi eder. Playwright testinde `getByLabel('Girdi dizesi')` iki öğe bulur (InputTape de aynı etikete sahip) → `input[aria-label=...]` kullan.
+- **Faz 4 parçaları:** `components/Markdown.jsx` (HTML enjekte etmeyen basit Markdown → React; regex içindeki `*` italiğe dönmez), `components/Tex.jsx` (KaTeX), `components/MiniCanvas.jsx` (ConvertPage'den ayrıldı). AI durumu App'te (`aiState`) tutulur, sekme değişince kaybolmaz. Backend `GET /api/ai/status` → `{configured, model}`. API hataları `error.status` taşır (503 = anahtar yok).
+- Gemini'siz uçtan uca test: Playwright `page.route('**/api/ai/*', ...)` ile sahte yanıt (`scratchpad` betiği örneği: generate → sabit DFA, explain → gerçek `/api/fa/to-regex` + sahte Markdown).
+- **Bilinen tuzaklar:** Cytoscape kapsayıcıya `position: relative` yazar → kapsayıcı `h-full w-full`, dış sarmalayıcı `absolute inset-0` olmalı. automata-lib'de geçici nesne üzerinde metod çağırmak (`DFA.from_nfa(x).isempty()`) "garbage collected" hatası verir → önce değişkene ata. Windows konsolunda `∅` yazdırmak için `PYTHONIOENCODING=utf-8`. automata-lib DTM şeridi sola uzadığında başa boşluk ekler ve `head` 0'da kalır → `withAbsolutePositions` bunu telafi eder. Playwright testinde `getByLabel('Girdi dizesi')` iki öğe bulur (InputTape de aynı etikete sahip) → `input[aria-label=...]` kullan. Yeni npm bağımlılığı eklenince Vite ilk açılışta bağımlılıkları optimize edip sayfayı yeniden yükler; ilk test zaman aşımına uğrayabilir.
 
 ## Faz 3 — PDA ve Turing Makinesi
 - [x] `lib/pda.js`: `emptyPDA`, `normalizePDA`, etiket ayrıştırma/biçimlendirme `girdi, çek → at` (örn. `a, ε → A`, `ε, $ → $`; `->` ve `→` ikisi de kabul edilsin), geçişleri kenar başına çok satırlı etiket olarak gruplama.
@@ -56,11 +58,12 @@ Tarayıcı testi: geçici bir klasöre `playwright-core` kurup `chromium.launch(
 - [x] `npm run build`, Edge ile uçtan uca test (aⁿbⁿ `aabb` kabul / `aab` red; TM `aabbcc` kabul, ikili +1 `1011` → `1100`), README güncelle, commit + push, onay bekle.
 
 ## Faz 4 — Yapay Zeka ve Konu Anlatımı
-- [ ] `pages/AIPage.jsx` — **Metinden otomat:** metin kutusu + örnek istemler → `api.ai.generate(prompt)` → sonucu önizle ve "Tuvale aktar" (App'teki `loadFaDoc` + sekmeyi `fa` yap).
-- [ ] **Otomatın dilini bulma:** mevcut FA dokümanı → `api.ai.explain(automaton)` → kesin regex (backend) + Gemini'nin Markdown açıklaması (basit güvenli Markdown render; HTML enjekte etme).
-- [ ] Anahtar yokken (HTTP 503) dostça bilgilendirme kartı: anahtarın nereden alınacağı (https://aistudio.google.com/apikey) ve `backend/.env` içine `GEMINI_API_KEY=` yazılacağı; FA sekmesine "Dilini açıkla" kısayolu.
-- [ ] `pages/TheoryPage.jsx` — pasif çalışma kartları: Düzenli Diller (tanım, kapanış özellikleri, DFA/NFA/regex denkliği), Pompalama Lemması (düzenli + bağlamdan bağımsız; ispat adımları, formüller, çözümlü örnekler: aⁿbⁿ, ww, aⁿbⁿcⁿ), Bağlamdan Bağımsız Diller (CFG, PDA denkliği), Chomsky Hiyerarşisi (tablo: tür, dilbilgisi, otomat, örnek). Formüller için KaTeX (`katex` npm paketi) kullan.
-- [ ] Gerçek Gemini anahtarıyla test (kullanıcı anahtarı `.env`'ye ekledikten sonra), README güncelle, commit + push.
+- [x] `pages/AIPage.jsx` — **Metinden otomat:** metin kutusu + örnek istemler → `api.ai.generate(prompt)` → sonucu önizle ve "Tuvale aktar" (App'teki `loadFaDoc` + sekmeyi `fa` yap).
+- [x] **Otomatın dilini bulma:** mevcut FA dokümanı → `api.ai.explain(automaton)` → kesin regex (backend) + Gemini'nin Markdown açıklaması (basit güvenli Markdown render; HTML enjekte etme).
+- [x] Anahtar yokken (HTTP 503) dostça bilgilendirme kartı: anahtarın nereden alınacağı (https://aistudio.google.com/apikey) ve `backend/.env` içine `GEMINI_API_KEY=` yazılacağı; FA sekmesine "Dilini açıkla" kısayolu.
+- [x] `pages/TheoryPage.jsx` — pasif çalışma kartları: Düzenli Diller (tanım, kapanış özellikleri, DFA/NFA/regex denkliği), Pompalama Lemması (düzenli + bağlamdan bağımsız; ispat adımları, formüller, çözümlü örnekler: aⁿbⁿ, ww, aⁿbⁿcⁿ), Bağlamdan Bağımsız Diller (CFG, PDA denkliği), Chomsky Hiyerarşisi (tablo: tür, dilbilgisi, otomat, örnek). Formüller için KaTeX (`katex` npm paketi) kullan.
+- [x] README güncelle, commit + push.
+- [ ] **Gerçek Gemini anahtarıyla test** (kullanıcı anahtarı `backend/.env`'ye ekledikten sonra): Yapay Zeka sekmesinde örnek istemlerle üret → tuvale aktar → birkaç dizeyle test et; "Dilini açıkla" çıktısının Markdown'ı düzgün görünüyor mu? Gerekirse `gemini.py` içindeki talimatları iyileştir.
 
 ## Son rötuşlar (isteğe bağlı, Faz 4 sonrası)
 - [ ] Toplu test (birden çok dizeyi aynı anda kabul/red listesi).

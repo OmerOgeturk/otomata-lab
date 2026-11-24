@@ -177,3 +177,12 @@ def test_ai_without_key_returns_503(monkeypatch):
     r = client.post("/api/ai/generate", json={"prompt": "11 içermeyen dizeler"})
     assert r.status_code == 503
     assert "GEMINI_API_KEY" in r.json()["detail"]
+    assert client.get("/api/ai/status").json()["configured"] is False
+
+
+def test_ai_status_reads_env_file(monkeypatch, tmp_path):
+    env = tmp_path / ".env"
+    env.write_text("GEMINI_API_KEY=deneme-anahtari\n", encoding="utf-8")
+    monkeypatch.setattr(gemini, "ENV_PATH", env)
+    monkeypatch.setenv("GEMINI_API_KEY", "")
+    assert client.get("/api/ai/status").json()["configured"] is True

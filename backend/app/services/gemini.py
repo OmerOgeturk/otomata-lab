@@ -65,9 +65,17 @@ Düzenli ifade notasyonu: | birleşim, * Kleene yıldızı, ? isteğe bağlı. D
 yalnızca yorumla. Yanıtı Markdown biçiminde ver."""
 
 
-def _client():
+def _api_key() -> str:
     load_dotenv(ENV_PATH, override=True)
-    key = os.getenv("GEMINI_API_KEY", "").strip()
+    return os.getenv("GEMINI_API_KEY", "").strip()
+
+
+def status() -> dict:
+    return {"configured": bool(_api_key()), "model": os.getenv("GEMINI_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL}
+
+
+def _client():
+    key = _api_key()
     if not key:
         raise AIUnavailable(
             "Gemini API anahtarı tanımlı değil. backend/.env dosyasına GEMINI_API_KEY ekleyin."

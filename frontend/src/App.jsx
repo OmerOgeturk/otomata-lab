@@ -1,15 +1,17 @@
-import { useState } from 'react'
+import { Suspense, lazy, useState } from 'react'
 import { ArrowRightLeft, BookOpen, Cpu, Layers, Sparkles, Workflow } from 'lucide-react'
-import { Placeholder } from './components/ui'
 import { useDocument } from './hooks/useDocument'
 import { emptyFA, normalizeFA } from './lib/fa'
 import { ensurePositions } from './lib/graph'
 import { emptyPDA, normalizePDA } from './lib/pda'
 import { emptyTM, normalizeTM } from './lib/tm'
+import AIPage from './pages/AIPage'
 import ConvertPage from './pages/ConvertPage'
 import FAPage from './pages/FAPage'
 import PDAPage from './pages/PDAPage'
 import TMPage from './pages/TMPage'
+
+const TheoryPage = lazy(() => import('./pages/TheoryPage'))
 
 const TABS = [
   { id: 'fa', label: 'Sonlu Otomat', icon: Workflow },
@@ -41,6 +43,18 @@ export default function App() {
   const fa = useDocument('fa', prepareFA)
   const pda = useDocument('pda', preparePDA)
   const tm = useDocument('tm', prepareTM)
+  const [aiState, setAiState] = useState({ prompt: '', generated: null, explanation: null, explainSource: '' })
+  const [autoExplain, setAutoExplain] = useState(false)
+
+  const explainFa = () => {
+    setAutoExplain(true)
+    setTab('ai')
+  }
+
+  const importGenerated = (generated) => {
+    fa.loadDoc({ name: `YZ: ${generated.prompt.slice(0, 48)}`, automaton: generated.automaton, positions: generated.positions })
+    setTab('fa')
+  }
 
   return (
     <div className="flex min-h-full flex-col">
@@ -77,20 +91,25 @@ export default function App() {
 
       <main className="mx-auto w-full max-w-[1600px] flex-1 p-4">
         {tab === 'fa' && (
-          <FAPage {...fa} onGoConvert={() => setTab('convert')} />
+          <FAPage {...fa} onGoConvert={() => setTab('convert')} onExplain={explainFa} />
         )}
         {tab === 'convert' && <ConvertPage doc={fa.doc} loadDoc={fa.loadDoc} onGoEditor={() => setTab('fa')} />}
         {tab === 'pda' && <PDAPage {...pda} />}
         {tab === 'tm' && <TMPage {...tm} />}
         {tab === 'ai' && (
-          <Placeholder icon={Sparkles} title="Yapay Zeka Asistanı">
-            Metinden otomat çizimi ve dil açıklama Faz 4'te eklenecek.
-          </Placeholder>
+          <AIPage
+            state={aiState}
+            setState={setAiState}
+            faDoc={fa.doc}
+            onImport={importGenerated}
+            autoExplain={autoExplain}
+            onAutoExplainDone={() => setAutoExplain(false)}
+          />
         )}
         {tab === 'theory' && (
-          <Placeholder icon={BookOpen} title="Konu Anlatımı">
-            Pompalama lemması, düzenli diller ve Chomsky hiyerarşisi kartları Faz 4'te eklenecek.
-          </Placeholder>
+          <Suspense fallback={<p className="p-6 text-sm text-slate-400">Yükleniyor…</p>}>
+            <TheoryPage onNavigate={setTab} />
+          </Suspense>
         )}
       </main>
     </div>

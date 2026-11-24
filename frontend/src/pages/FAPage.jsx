@@ -8,6 +8,7 @@ import {
   Maximize,
   MousePointer2,
   PlusCircle,
+  Sparkles,
   Spline,
   Table2,
   Trash2,
@@ -33,7 +34,7 @@ const MODES = [
   { id: 'delete', label: 'Sil', icon: Eraser },
 ]
 
-export default function FAPage({ doc, setDoc, loadDoc, fitKey, onGoConvert }) {
+export default function FAPage({ doc, setDoc, loadDoc, fitKey, onGoConvert, onExplain }) {
   const fa = doc.automaton
   const canvasRef = useRef(null)
   const [mode, setMode] = useState('select')
@@ -294,9 +295,14 @@ export default function FAPage({ doc, setDoc, loadDoc, fitKey, onGoConvert }) {
             </div>
           )}
         </Panel>
-        <Button icon={ArrowRightLeft} onClick={onGoConvert} disabled={!fa.states.length}>
-          Dönüşüm merkezinde aç
-        </Button>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+          <Button icon={ArrowRightLeft} onClick={onGoConvert} disabled={!fa.states.length}>
+            Dönüşüm merkezinde aç
+          </Button>
+          <Button icon={Sparkles} onClick={onExplain} disabled={!fa.states.length}>
+            Dilini yapay zekayla açıkla
+          </Button>
+        </div>
       </aside>
 
       <Dialog

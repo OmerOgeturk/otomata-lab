@@ -8,6 +8,11 @@ from app.services import gemini
 router = APIRouter(prefix="/api/ai", tags=["Yapay Zeka"])
 
 
+@router.get("/status")
+def ai_status():
+    return gemini.status()
+
+
 @router.post("/generate", response_model=FiniteAutomaton)
 async def ai_generate(req: AIGenerateRequest):
     return await run_in_threadpool(gemini.generate_automaton, req.prompt)

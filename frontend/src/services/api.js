@@ -19,7 +19,11 @@ async function request(path, body) {
     throw new Error('Sunucuya ulaşılamadı. Backend çalışıyor mu? (uvicorn app.main:app --reload)')
   }
   const data = await response.json().catch(() => null)
-  if (!response.ok) throw new Error(formatDetail(data?.detail) || `İstek başarısız oldu (${response.status}).`)
+  if (!response.ok) {
+    const error = new Error(formatDetail(data?.detail) || `İstek başarısız oldu (${response.status}).`)
+    error.status = response.status
+    throw error
+  }
   return data
 }
 
@@ -40,6 +44,7 @@ export const api = {
     templates: () => request('/api/tm/templates'),
   },
   ai: {
+    status: () => request('/api/ai/status'),
     generate: (prompt) => request('/api/ai/generate', { prompt }),
     explain: (automaton) => request('/api/ai/explain', automaton),
   },

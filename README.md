@@ -43,6 +43,8 @@ Uygulama: http://localhost:5173 (geliştirme sunucusu `/api` isteklerini otomati
 - **Kaydetme:** çalışma alanı tarayıcıya otomatik taslak olarak kaydedilir. Ayrıca adlandırılmış kayıt, JSON indirme ve yükleme vardır. Tüm kayıt işlemleri `frontend/src/services/storageService.js` üzerinden yapılır; ileride Supabase vb. için yalnızca `setStorageAdapter` ile yeni bir adaptör vermek yeterlidir.
 - **Yığıtlı Otomat sekmesi:** durumları aynı şekilde çizin; geçiş penceresine her satıra bir kural yazın: `girdi, çek → at` (örn. `a, ε → A`, `ε, $ → $`; `->` de olur). Σ, Γ ve başlangıç yığıt sembolü Z₀ araç çubuğundan ayarlanır. Test sırasında sağdaki **canlı yığıt** her adımda eklenen/çıkarılan sembolleri animasyonla gösterir; sonuç automata-lib NPDA motoruyla doğrulanır. Kabul: girdi bitince kabul durumunda olmak.
 - **Turing Makinesi sekmesi:** doğruluğu kesin klasik makinelerden birini seçin (aⁿbⁿcⁿ, 0ⁿ1ⁿ, ikili +1), girdiyi yazıp *Çalıştır*'a basın. **Canlı şerit** üzerinde okuma/yazma kafası ve yazılan hücreler adım adım izlenir; geçiş tablosunda sıradaki geçiş vurgulanır. Sonsuz döngülere karşı adım sınırı ayarlanabilir. Kendi makinenizi JSON olarak yükleyebilirsiniz (sunucuda doğrulanır).
+- **Yapay Zeka sekmesi:** dili Türkçe tarif edin (örn. “1'lerin sayısı 3'ün katı olan ikili dizeler”), *Otomat üret* ile Gemini otomatı çizsin; önizleyip *Tuvale aktar* ile düzenleyiciye alın. *Otomatın dilini bul* bölümü, tuvaldeki otomatın kesin düzenli ifadesini sunucuda türetir ve Gemini'ye sade bir Türkçe açıklama yazdırır. Sonlu Otomat sekmesindeki *Dilini yapay zekayla açıkla* düğmesi aynı işlemi tek tıkla yapar. Anahtar tanımlı değilse sekme, anahtarın nasıl ekleneceğini gösteren bir kart açar.
+- **Konu Anlatımı sekmesi:** Düzenli Diller, Pompalama Lemması (çözümlü aⁿbⁿ, ww, aⁿbⁿcⁿ örnekleriyle), Bağlamdan Bağımsız Diller ve Chomsky Hiyerarşisi kartları; formüller KaTeX ile gösterilir, kartlardan ilgili modüle geçilebilir.
 
 ## Testler
 ```bash
@@ -50,7 +52,7 @@ cd backend
 pytest
 ```
 
-## API Uç Noktaları (Faz 1)
+## API Uç Noktaları
 | Yöntem | Yol | Açıklama |
 |---|---|---|
 | POST | `/api/fa/simulate` | DFA/NFA/ε-NFA adım adım simülasyon |
@@ -62,6 +64,7 @@ pytest
 | GET | `/api/pda/templates` | aⁿbⁿ, palindrom vb. |
 | POST | `/api/tm/simulate` | DTM simülasyonu (şerit + kafa izi) |
 | GET | `/api/tm/templates` | aⁿbⁿcⁿ, ikili +1 vb. |
+| GET | `/api/ai/status` | Gemini anahtarı tanımlı mı? |
 | POST | `/api/ai/generate` | Doğal dilden otomat (Gemini) |
 | POST | `/api/ai/explain` | Otomatın dilini Türkçe açıklama (Gemini) |
 
