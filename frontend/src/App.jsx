@@ -1,5 +1,5 @@
 import { Suspense, lazy, useState } from 'react'
-import { ArrowRightLeft, BookOpen, Cpu, Layers, ListTree, Sparkles, Workflow } from 'lucide-react'
+import { ArrowRightLeft, Blend, BookOpen, Cpu, Layers, ListTree, Sparkles, Workflow } from 'lucide-react'
 import { useDocument } from './hooks/useDocument'
 import { emptyFA, normalizeFA } from './lib/fa'
 import { ensurePositions } from './lib/graph'
@@ -12,11 +12,13 @@ import TMPage from './pages/TMPage'
 
 const AIPage = lazy(() => import('./pages/AIPage'))
 const CFGPage = lazy(() => import('./pages/CFGPage'))
+const AlgebraPage = lazy(() => import('./pages/AlgebraPage'))
 const TheoryPage = lazy(() => import('./pages/TheoryPage'))
 
 const TABS = [
   { id: 'fa', label: 'Sonlu Otomat', icon: Workflow },
   { id: 'convert', label: 'Dönüşümler', icon: ArrowRightLeft },
+  { id: 'algebra', label: 'Dil İşlemleri', icon: Blend },
   { id: 'pda', label: 'Yığıtlı Otomat', icon: Layers },
   { id: 'tm', label: 'Turing Makinesi', icon: Cpu },
   { id: 'cfg', label: 'Gramer (CNF)', icon: ListTree },
@@ -48,7 +50,22 @@ export default function App() {
   const [aiState, setAiState] = useState({ prompt: '', generated: null, explanation: null, explainSource: '' })
   const [imageState, setImageState] = useState({ image: null, task: 'grammar', question: '', result: null })
   const [cfgState, setCfgState] = useState({ grammar: 'S → aSb | ε', result: null })
+  const [algebraState, setAlgebraState] = useState({
+    alphabet: '0, 1',
+    languages: [
+      { name: 'A', kind: 'contains', value: '00' },
+      { name: 'B', kind: 'not_contains', value: '11' },
+      { name: 'C', kind: 'not_contains', value: '000' },
+    ],
+    expression: '(A∪B)*C',
+    result: null,
+  })
   const [autoExplain, setAutoExplain] = useState(false)
+
+  const importAutomaton = ({ name, automaton, positions }) => {
+    fa.loadDoc({ name, automaton, positions })
+    setTab('fa')
+  }
 
   const openGrammar = (grammar) => {
     setCfgState({ grammar, result: null })
@@ -105,6 +122,11 @@ export default function App() {
         {tab === 'convert' && <ConvertPage doc={fa.doc} loadDoc={fa.loadDoc} onGoEditor={() => setTab('fa')} />}
         {tab === 'pda' && <PDAPage {...pda} />}
         {tab === 'tm' && <TMPage {...tm} />}
+        {tab === 'algebra' && (
+          <Suspense fallback={<p className="p-6 text-sm text-slate-400">Yükleniyor…</p>}>
+            <AlgebraPage state={algebraState} setState={setAlgebraState} faDoc={fa.doc} onImport={importAutomaton} />
+          </Suspense>
+        )}
         {tab === 'cfg' && (
           <Suspense fallback={<p className="p-6 text-sm text-slate-400">Yükleniyor…</p>}>
             <CFGPage state={cfgState} setState={setCfgState} />

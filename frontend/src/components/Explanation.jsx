@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Check, Copy, ShieldAlert, Sparkles } from 'lucide-react'
 import Markdown from './Markdown'
+import RegexText from './Regex'
 
 export default function Explanation({ result }) {
   const [copied, setCopied] = useState(false)
@@ -18,7 +19,7 @@ export default function Explanation({ result }) {
       <div>
         <p className="mb-1 text-xs font-medium text-slate-500">Kesin düzenli ifade (sunucuda matematiksel olarak türetildi)</p>
         <div className="flex items-start gap-2 rounded-lg bg-indigo-50 px-3 py-2 ring-1 ring-indigo-100">
-          <code className="flex-1 break-all font-mono text-sm text-indigo-900">{result.regex}</code>
+          <RegexText value={result.regex} className="flex-1 break-all text-lg text-indigo-900" />
           <button type="button" onClick={copy} className="text-indigo-500 hover:text-indigo-700" title="Kopyala" aria-label="Düzenli ifadeyi kopyala">
             {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
           </button>

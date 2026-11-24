@@ -69,8 +69,9 @@ Otomatın tanıdığı dili üniversite öğrencisinin anlayacağı sade bir Tü
 1. Dilin tek cümlelik tanımı.
 2. Durumların sezgisel anlamı (her durum neyi "hatırlıyor").
 3. Kabul edilen ve reddedilen 3'er örnek dize.
-Düzenli ifade notasyonu: | birleşim, * Kleene yıldızı, ? isteğe bağlı. Düzenli ifadeyi değiştirme,
-yalnızca yorumla. Yanıtı Markdown biçiminde ver."""
+Verilen düzenli ifadede | birleşim, * Kleene yıldızı, ? isteğe bağlı demektir. Düzenli ifadeyi değiştirme,
+yalnızca yorumla. Metinde düzenli ifade yazarken LaTeX kullan: birleşim için \\cup, yıldız üst simge olsun,
+örn. $(0 \\cup 1)^*00$. Yanıtı Markdown biçiminde ver."""
 
 
 def _api_key() -> str:

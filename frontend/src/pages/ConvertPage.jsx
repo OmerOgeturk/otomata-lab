@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ArrowRight, Copy, Minimize2, Regex, Shuffle, Table2, Upload } from 'lucide-react'
 import MiniCanvas from '../components/MiniCanvas'
+import RegexText from '../components/Regex'
 import TransitionTable from '../components/TransitionTable'
 import { Alert, Badge, Button, Panel } from '../components/ui'
 import { normalizeFA } from '../lib/fa'
@@ -131,14 +132,14 @@ export default function ConvertPage({ doc, loadDoc, onGoEditor }) {
             {result.regex !== undefined ? (
               <div className="space-y-3">
                 <div className="flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-3">
-                  <code className="flex-1 break-all font-mono text-lg text-emerald-300">{result.regex}</code>
+                  <RegexText value={result.regex} className="flex-1 break-all text-2xl text-emerald-300" />
                   <Button variant="ghost" icon={Copy} onClick={copyRegex} className="text-slate-300 hover:bg-slate-700">
                     {copied ? 'Kopyalandı' : 'Kopyala'}
                   </Button>
                 </div>
                 <p className="text-sm text-slate-500">
-                  Notasyon: <code className="font-mono">|</code> birleşim (∪), <code className="font-mono">*</code> Kleene yıldızı,{' '}
-                  <code className="font-mono">?</code> isteğe bağlı (r|ε), <code className="font-mono">∅</code> boş dil.
+                  Notasyon: ∪ birleşim, üstteki <sup>*</sup> Kleene yıldızı, <code className="font-mono">?</code> isteğe bağlı (r ∪ ε),{' '}
+                  <code className="font-mono">∅</code> boş dil. <em>Kopyala</em> düğmesi ifadeyi düz metin olarak (<code className="font-mono">|</code> ve <code className="font-mono">*</code> ile) kopyalar.
                 </p>
               </div>
             ) : (

@@ -161,3 +161,15 @@ class AIImageResponse(BaseModel):
     automaton: Optional[FiniteAutomaton] = None
     regex: Optional[str] = None
     answer: Optional[str] = None
+
+
+class LanguageDefinition(BaseModel):
+    kind: Literal["contains", "not_contains", "starts", "not_starts", "ends", "not_ends", "regex", "automaton"]
+    value: str = Field(default="", max_length=200)
+    automaton: Optional[dict] = None
+
+
+class AlgebraRequest(BaseModel):
+    alphabet: list[str] = Field(min_length=1, max_length=10)
+    languages: dict[str, LanguageDefinition] = Field(max_length=12)
+    expression: str = Field(min_length=1, max_length=200)

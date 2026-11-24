@@ -352,3 +352,66 @@ def test_ai_quota_exhausted_is_reported_and_not_retried(monkeypatch):
     assert fake.calls.count("ana") == 1
     fake = _fake_client(monkeypatch, {"ana": 429, "yedek": 429}, ["ana", "yedek"])
     assert "tüm modellerde" in client.post("/api/ai/generate", json={"prompt": "herhangi bir dil"}).json()["detail"]
+
+
+ALGEBRA_LANGS = {
+    "A": {"kind": "contains", "value": "00"},
+    "B": {"kind": "not_contains", "value": "11"},
+    "C": {"kind": "not_contains", "value": "000"},
+    "R": {"kind": "regex", "value": "(0+1)*01"},
+}
+ALGEBRA_MEMBER = {
+    "A": lambda w: "00" in w,
+    "B": lambda w: "11" not in w,
+    "C": lambda w: "000" not in w,
+    "R": lambda w: w.endswith("01"),
+}
+
+
+def algebra(expression, languages=ALGEBRA_LANGS):
+    r = client.post("/api/fa/algebra", json={"alphabet": ["0", "1"], "languages": languages, "expression": expression})
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+def split_in(w, member):
+    return w == "" or any(member(w[:i]) and split_in(w[i:], member) for i in range(1, len(w) + 1))
+
+
+@pytest.mark.parametrize(
+    "expression, member",
+    [
+        ("A∩B", lambda w: "00" in w and "11" not in w),
+        ("A ∪ R", lambda w: "00" in w or w.endswith("01")),
+        ("Aᶜ", lambda w: "00" not in w),
+        ("¬A ∩ C", lambda w: "00" not in w),
+        ("A − B", lambda w: "00" in w and "11" in w),
+        ("AR", lambda w: any("00" in w[:i] and w[i:].endswith("01") for i in range(len(w) + 1))),
+        ("(A∩B)*", lambda w: split_in(w, lambda x: "00" in x and "11" not in x)),
+        ("(A∩B)⁺", lambda w: w != "" and split_in(w, lambda x: "00" in x and "11" not in x)),
+        ("Σ* − A", lambda w: "00" not in w),
+        ("ε ∪ R", lambda w: w == "" or w.endswith("01")),
+    ],
+)
+def test_language_algebra_matches_definition(expression, member):
+    result = algebra(expression)
+    for w in words("01", 8):
+        assert fa_accepts(result["automaton"], w) == bool(member(w)), (expression, w)
+    assert client.post("/api/fa/minimize", json=result["automaton"]).json()["states"].__len__() == len(result["automaton"]["states"])
+
+
+def test_language_algebra_user_example_is_universal():
+    result = algebra("(AUB)*C")
+    assert result["universal"] and result["automaton"]["states"] == ["q0"]
+    assert [s["operation"] for s in result["steps"]] == ["Birleşim", "Kleene yıldızı", "Birleştirme (art arda ekleme)"]
+    assert result["languages"][0]["description"] == "00 alt dizesini içeren dizeler"
+
+
+def test_language_algebra_errors():
+    r = client.post("/api/fa/algebra", json={"alphabet": ["0", "1"], "languages": ALGEBRA_LANGS, "expression": "A ∪ D"})
+    assert r.status_code == 422 and "D' dili tanımlı değil" in r.json()["detail"]
+    r = client.post("/api/fa/algebra", json={"alphabet": ["0", "1"], "languages": ALGEBRA_LANGS, "expression": "(A ∪ B"})
+    assert r.status_code == 422
+    bad = {"A": {"kind": "contains", "value": "2"}}
+    r = client.post("/api/fa/algebra", json={"alphabet": ["0", "1"], "languages": bad, "expression": "A"})
+    assert r.status_code == 422 and r.json()["detail"].startswith("A dili")

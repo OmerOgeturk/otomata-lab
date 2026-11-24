@@ -33,6 +33,7 @@ export const api = {
     nfaToDfa: (automaton) => request('/api/fa/nfa-to-dfa', automaton),
     minimize: (automaton) => request('/api/fa/minimize', automaton),
     toRegex: (automaton) => request('/api/fa/to-regex', automaton),
+    algebra: (alphabet, languages, expression) => request('/api/fa/algebra', { alphabet, languages, expression }),
     templates: () => request('/api/fa/templates'),
   },
   pda: {

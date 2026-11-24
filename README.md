@@ -47,6 +47,7 @@ Uygulama: http://localhost:5173 (geliştirme sunucusu `/api` isteklerini otomati
 - **Turing Makinesi sekmesi:** doğruluğu kesin klasik makinelerden birini seçin (aⁿbⁿcⁿ, 0ⁿ1ⁿ, ikili +1), girdiyi yazıp *Çalıştır*'a basın. **Canlı şerit** üzerinde okuma/yazma kafası ve yazılan hücreler adım adım izlenir; geçiş tablosunda sıradaki geçiş vurgulanır. Sonsuz döngülere karşı adım sınırı ayarlanabilir. Kendi makinenizi JSON olarak yükleyebilirsiniz (sunucuda doğrulanır).
 - **Yapay Zeka sekmesi:** dili Türkçe tarif edin (örn. “1'lerin sayısı 3'ün katı olan ikili dizeler”), *Otomat üret* ile Gemini otomatı çizsin; önizleyip *Tuvale aktar* ile düzenleyiciye alın. *Otomatın dilini bul* bölümü, tuvaldeki otomatın kesin düzenli ifadesini sunucuda türetir ve Gemini'ye sade bir Türkçe açıklama yazdırır. Sonlu Otomat sekmesindeki *Dilini yapay zekayla açıkla* düğmesi aynı işlemi tek tıkla yapar. Anahtar tanımlı değilse sekme, anahtarın nasıl ekleneceğini gösteren bir kart açar.
 - **Fotoğraftan analiz (Yapay Zeka sekmesi):** fotoğrafı sürükleyin, seçin ya da Ctrl+V ile yapıştırın ve görevi seçin. *Gramer → CNF*: Gemini gramerin metnini okur (düzeltilebilir), dönüşümü sunucu kesin olarak yapar. *Otomat ne iş yapar?*: diyagram okunur, tanıdığı dilin kesin düzenli ifadesi türetilir, Gemini açıklar; otomat tuvale aktarılıp test edilebilir. *Serbest soru*: fotoğraftaki soru ya da şekil hakkında istediğinizi sorun.
+- **Dil İşlemleri sekmesi:** dilleri tanımlayın (örn. A = `00` içerir, B = `11` içermez, C = `000` içermez; ayrıca ile başlar/biter, düzenli ifade ya da tuvaldeki otomat) ve `(A∪B)*C` gibi bir ifade yazın. Birleşim (∪, U, |), kesişim (∩), fark (−), art arda ekleme (yan yana), yıldız (*), pozitif kapanış (⁺) ve tümleme (ᶜ) desteklenir. Sonucu tanıyan minimal DFA, eşdeğer düzenli ifade ve her ara adımın durum sayısı gösterilir; sonuç Σ* ya da ∅ ise ayrıca belirtilir.
 - **Gramer (CNF) sekmesi:** bağlamdan bağımsız grameri yazın (`S → aSb | ε`); yeni başlangıç, ε-kuralları, birim kurallar, gereksiz değişkenler, terminalleri ayırma ve ikiye bölme adımlarıyla Chomsky normal formu çıkarılır. CYK algoritması tablosuyla dize testi yapılır. Yapay zeka gerektirmez.
 - **Konu Anlatımı sekmesi:** Düzenli Diller, Pompalama Lemması (çözümlü aⁿbⁿ, ww, aⁿbⁿcⁿ örnekleriyle), Bağlamdan Bağımsız Diller ve Chomsky Hiyerarşisi kartları; formüller KaTeX ile gösterilir, kartlardan ilgili modüle geçilebilir.
 
@@ -72,6 +73,7 @@ pytest
 | POST | `/api/ai/generate` | Doğal dilden otomat (Gemini) |
 | POST | `/api/ai/explain` | Otomatın dilini Türkçe açıklama (Gemini) |
 | POST | `/api/ai/image` | Fotoğraftan gramer/otomat okuma ya da serbest soru (Gemini) |
+| POST | `/api/fa/algebra` | Tanımlı dillerle küme işlemleri → minimal DFA |
 | POST | `/api/cfg/cnf` | Gramer → Chomsky normal formu (adım adım) |
 | POST | `/api/cfg/cyk` | CNF gramerde CYK ile üyelik testi |
 

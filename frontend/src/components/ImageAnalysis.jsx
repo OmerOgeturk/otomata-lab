@@ -7,6 +7,7 @@ import { api } from '../services/api'
 import CNFResult from './CNFResult'
 import Explanation from './Explanation'
 import Markdown from './Markdown'
+import RegexText from './Regex'
 import MiniCanvas from './MiniCanvas'
 import TransitionTable from './TransitionTable'
 import { Alert, Badge, Button, Panel, inputClass } from './ui'
@@ -153,7 +154,7 @@ function AutomatonResult({ result, set, onImport, onError, keyMissing }) {
           <>
             <div>
               <p className="mb-1 text-xs font-medium text-slate-500">Kesin düzenli ifade</p>
-              <code className="block break-all rounded-lg bg-indigo-50 px-3 py-2 font-mono text-sm text-indigo-900 ring-1 ring-indigo-100">{result.regex}</code>
+              <p className="break-all rounded-lg bg-indigo-50 px-3 py-2 text-lg text-indigo-900 ring-1 ring-indigo-100"><RegexText value={result.regex} /></p>
             </div>
             {busy ? (
               <p className="animate-pulse text-sm text-slate-400">Dilin açıklaması hazırlanıyor…</p>

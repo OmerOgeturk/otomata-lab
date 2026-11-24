@@ -1,10 +1,12 @@
 from fastapi import APIRouter
 
+from app.core import algebra as algebra_core
 from app.core import cfg as cfg_core
 from app.core import fa as fa_core
 from app.core import pda as pda_core
 from app.core import tm as tm_core
 from app.schemas import (
+    AlgebraRequest,
     CFGRequest,
     CYKRequest,
     FASimulateRequest,
@@ -43,6 +45,12 @@ def fa_minimize(automaton: FiniteAutomaton):
 @fa_router.post("/to-regex", response_model=RegexResponse)
 def fa_to_regex(automaton: FiniteAutomaton):
     return RegexResponse(regex=fa_core.to_regex(automaton))
+
+
+@fa_router.post("/algebra")
+def fa_algebra(req: AlgebraRequest):
+    languages = {name: d.model_dump() for name, d in req.languages.items()}
+    return algebra_core.evaluate(req.alphabet, languages, req.expression)
 
 
 @fa_router.get("/templates", response_model=list[Template])
