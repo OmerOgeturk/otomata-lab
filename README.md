@@ -8,6 +8,10 @@
 
 Geliştirme durumu ve kalan işler: [docs/YAPILACAKLAR.md](docs/YAPILACAKLAR.md)
 
+## Hızlı başlatma (Windows)
+
+Kurulum bir kez yapıldıktan sonra proje kökündeki `baslat.bat` dosyasına çift tıklayın: backend (port 8000) ve frontend (port 5173) ayrı pencerelerde açılır, tarayıcıda http://localhost:5173 başlar. Kapatmak için iki pencereyi kapatmanız yeterlidir. `frontend/node_modules` yoksa betik önce `npm install` çalıştırır.
+
 ## Kurulum
 
 ### Backend
